@@ -4,11 +4,15 @@ add_library("svarog" SHARED)
 target_sources(
   "svarog"
   PRIVATE
-    "source/svarog/network/Socket.cpp"
+    "source/svarog/ip/ip_address.cpp"
+    "source/svarog/ip/ip_address_v4.cpp"
+    "source/svarog/network/socket.cpp"
   PUBLIC
     FILE_SET svarog_headers
     TYPE HEADERS
     BASE_DIRS "include"
     FILES
-      "include/svarog/network/Socket.hpp"
+      "include/svarog/ip/ip_address.hpp"
+      "include/svarog/ip/ip_address_v4.hpp"
+      "include/svarog/network/socket.hpp"
 )

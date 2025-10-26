@@ -1,0 +1,15 @@
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+
+[*.{c++,cc,cpp,cxx,h,h++,hh,hpp,hxx,inl,ipp,tlh,tli}]
+indent_style = space
+indent_size = 4
+
+cpp_indent_case_contents_when_block = true
+cpp_new_line_before_open_brace_namespace = same_line
+
+[CMakeLists.txt]
+indent_style = space
+indent_size = 2

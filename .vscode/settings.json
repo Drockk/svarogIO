@@ -1,5 +1,8 @@
 {
     "cSpell.words": [
         "svarog"
-    ]
+    ],
+    "files.associations": {
+        "locale": "cpp"
+    }
 }

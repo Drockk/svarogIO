@@ -14,7 +14,7 @@ Phase 1 focuses on implementing the core execution infrastructure of svarogIO: `
 ### 0.1 GSL Integration
 **Estimated Time**: 1-2 days
 
-- [ ] Add GSL-Lite dependency to CMake
+- ✅ Add GSL-Lite dependency to CMake
   ```cmake
   FetchContent_Declare(
       gsl-lite
@@ -23,12 +23,12 @@ Phase 1 focuses on implementing the core execution infrastructure of svarogIO: `
   )
   FetchContent_MakeAvailable(gsl-lite)
   ```
-- [ ] Create `svarog/include/svarog/core/contracts.hpp`
-  - [ ] Define `SVAROG_EXPECTS(condition)` macro
-  - [ ] Define `SVAROG_ENSURES(condition)` macro
-  - [ ] Define `SVAROG_ASSERT(condition)` macro
-  - [ ] Support both Debug and Release builds
-  - [ ] Custom violation handler for better error messages
+- ✅ Create `svarog/include/svarog/core/contracts.hpp`
+  - ✅ Define `SVAROG_EXPECTS(condition)` macro
+  - ✅ Define `SVAROG_ENSURES(condition)` macro
+  - ✅ Define `SVAROG_ASSERT(condition)` macro
+  - ✅ Support both Debug and Release builds
+  - ✅ Custom violation handler for better error messages
 
 **Example Implementation**:
 ```cpp
@@ -63,15 +63,15 @@ namespace svarog::core {
 ### 0.2 Contract Policy Documentation
 **Estimated Time**: 1 day
 
-- [ ] Create `docs/CODING_STANDARDS.md`
-- [ ] Document when to use `SVAROG_EXPECTS` vs `std::expected`
-  - [ ] `SVAROG_EXPECTS`: Programming errors (precondition violations)
-  - [ ] `std::expected`: Expected runtime errors (business logic)
-- [ ] Document contract categories:
-  - [ ] **Critical** (always check): null pointers, resource ownership
-  - [ ] **Debug-only**: range checks, performance-sensitive paths
-  - [ ] **Documentation**: complex invariants (comments only)
-- [ ] Provide examples for each component
+- ✅ Create `docs/CODING_STANDARDS.md`
+- ✅ Document when to use `SVAROG_EXPECTS` vs `std::expected`
+  - ✅ `SVAROG_EXPECTS`: Programming errors (precondition violations)
+  - ✅ `std::expected`: Expected runtime errors (business logic)
+- ✅ Document contract categories:
+  - ✅ **Critical** (always check): null pointers, resource ownership
+  - ✅ **Debug-only**: range checks, performance-sensitive paths
+  - ✅ **Documentation**: complex invariants (comments only)
+- ✅ Provide examples for each component
 
 **Acceptance Criteria**:
 - Clear guidelines for contract usage

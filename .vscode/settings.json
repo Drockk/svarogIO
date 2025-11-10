@@ -69,7 +69,14 @@
         "typeinfo": "cpp",
         "format": "cpp",
         "__nullptr": "cpp",
-        "coroutine": "cpp"
+        "coroutine": "cpp",
+        "assert": "cpp",
+        "byte": "cpp",
+        "narrow": "cpp",
+        "pointers": "cpp",
+        "span_ext": "cpp",
+        "util": "cpp",
+        "zstring": "cpp"
     },
     "C_Cpp.default.cppStandard": "c++23",
     "C_Cpp.default.configurationProvider": "ms-vscode.cmake-tools",

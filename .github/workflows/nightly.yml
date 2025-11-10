@@ -1,0 +1,146 @@
+# Nightly Full Build, Tests, and Benchmarks
+name: Nightly Build
+
+on:
+  schedule:
+    # Runs at 00:00 CET (22:00 UTC in winter, 23:00 UTC in summer)
+    # Using 22:00 UTC to be safe for winter time
+    - cron: '0 22 * * *'
+  workflow_dispatch: # Allow manual trigger
+
+jobs:
+  nightly-full-build:
+    runs-on: ${{ matrix.os }}
+    
+    strategy:
+      fail-fast: false
+      
+      matrix:
+        os: [ubuntu-latest]
+        build_type: [Release, Debug, RelWithDebInfo]
+        c_compiler: [gcc, clang]
+        include:
+          - os: ubuntu-latest
+            c_compiler: gcc
+            cpp_compiler: g++
+            cxx_standard: 23
+          - os: ubuntu-latest
+            c_compiler: clang
+            cpp_compiler: clang++
+            cxx_standard: 23
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y ninja-build
+    
+    - name: Set reusable strings
+      id: strings
+      shell: bash
+      run: |
+        echo "build-output-dir=${{ github.workspace }}/build" >> "$GITHUB_OUTPUT"
+        echo "timestamp=$(date +'%Y-%m-%d_%H-%M-%S')" >> "$GITHUB_OUTPUT"
+    
+    - name: Configure CMake
+      run: >
+        cmake -B ${{ steps.strings.outputs.build-output-dir }}
+        -G Ninja
+        -DCMAKE_CXX_COMPILER=${{ matrix.cpp_compiler }}
+        -DCMAKE_C_COMPILER=${{ matrix.c_compiler }}
+        -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
+        -DCMAKE_CXX_STANDARD=${{ matrix.cxx_standard }}
+        -DSVAROG_BUILD_TESTS=ON
+        -DSVAROG_BUILD_BENCHMARKS=ON
+        -DSVAROG_BUILD_EXAMPLES=ON
+        -S ${{ github.workspace }}
+    
+    - name: Build All Targets
+      run: cmake --build ${{ steps.strings.outputs.build-output-dir }} --config ${{ matrix.build_type }}
+    
+    - name: Run Unit Tests
+      working-directory: ${{ steps.strings.outputs.build-output-dir }}
+      run: ctest --build-config ${{ matrix.build_type }} --output-on-failure --verbose
+    
+    - name: Run Benchmarks (Release only)
+      if: matrix.build_type == 'Release'
+      working-directory: ${{ steps.strings.outputs.build-output-dir }}
+      run: |
+        ./svarog_benchmarks --benchmark-samples 1000 > benchmark_results_${{ matrix.c_compiler }}.txt
+    
+    - name: Upload Benchmark Results
+      if: matrix.build_type == 'Release'
+      uses: actions/upload-artifact@v4
+      with:
+        name: benchmark-results-${{ matrix.c_compiler }}-${{ steps.strings.outputs.timestamp }}
+        path: ${{ steps.strings.outputs.build-output-dir }}/benchmark_results_${{ matrix.c_compiler }}.txt
+        retention-days: 30
+    
+    - name: Upload Test Results
+      if: failure()
+      uses: actions/upload-artifact@v4
+      with:
+        name: test-results-${{ matrix.c_compiler }}-${{ matrix.build_type }}-${{ steps.strings.outputs.timestamp }}
+        path: ${{ steps.strings.outputs.build-output-dir }}/Testing/Temporary/
+        retention-days: 7
+  
+  sanitizers:
+    runs-on: ubuntu-latest
+    
+    strategy:
+      fail-fast: false
+      
+      matrix:
+        sanitizer: [thread, address, undefined]
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y ninja-build
+    
+    - name: Configure with Sanitizer
+      run: >
+        cmake -B build
+        -G Ninja
+        -DCMAKE_CXX_COMPILER=clang++
+        -DCMAKE_C_COMPILER=clang
+        -DCMAKE_BUILD_TYPE=Debug
+        -DCMAKE_CXX_FLAGS="-fsanitize=${{ matrix.sanitizer }} -g"
+        -DSVAROG_BUILD_TESTS=ON
+        -S ${{ github.workspace }}
+    
+    - name: Build
+      run: cmake --build build
+    
+    - name: Run Tests with ${{ matrix.sanitizer }} sanitizer
+      working-directory: build
+      env:
+        ASAN_OPTIONS: detect_leaks=1:strict_string_checks=1:detect_stack_use_after_return=1:check_initialization_order=1:strict_init_order=1
+        TSAN_OPTIONS: second_deadlock_stack=1
+        UBSAN_OPTIONS: print_stacktrace=1
+      run: ctest --output-on-failure --verbose
+    
+    - name: Upload Sanitizer Results
+      if: failure()
+      uses: actions/upload-artifact@v4
+      with:
+        name: sanitizer-${{ matrix.sanitizer }}-results
+        path: build/Testing/Temporary/
+        retention-days: 7
+  
+  summary:
+    runs-on: ubuntu-latest
+    needs: [nightly-full-build, sanitizers]
+    if: always()
+    
+    steps:
+    - name: Check Results
+      run: |
+        echo "Nightly build completed"
+        echo "Build status: ${{ needs.nightly-full-build.result }}"
+        echo "Sanitizer status: ${{ needs.sanitizers.result }}"

@@ -46,6 +46,7 @@ class TaskList;
 class Scheduler
 {
 public:
+    Scheduler(const size_t t_number_worker_threads);
     ~Scheduler();
 
     void wait_for_task_list(TaskList& t_taskList);
@@ -54,7 +55,6 @@ public:
         create(const size_t t_number_worker_threads = 0);
 
 private:
-    Scheduler(const size_t t_number_worker_threads);
     Scheduler(const Scheduler&)             = delete;
     Scheduler(Scheduler&&)                  = delete;
     Scheduler& operator=(const Scheduler&)  = delete;

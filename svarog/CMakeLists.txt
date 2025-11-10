@@ -13,6 +13,7 @@ target_sources(
     BASE_DIRS "include"
     FILES
       "include/svarog/core/contracts.hpp"
+      "include/svarog/execution/execution_context.hpp"
       "include/svarog/ip/ip_address.hpp"
       "include/svarog/ip/ip_address_v4.hpp"
       "include/svarog/network/socket.hpp"

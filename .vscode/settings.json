@@ -76,7 +76,9 @@
         "pointers": "cpp",
         "span_ext": "cpp",
         "util": "cpp",
-        "zstring": "cpp"
+        "zstring": "cpp",
+        "complex": "cpp",
+        "regex": "cpp"
     },
     "C_Cpp.default.cppStandard": "c++23",
     "C_Cpp.default.configurationProvider": "ms-vscode.cmake-tools",

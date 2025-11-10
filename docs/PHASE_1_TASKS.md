@@ -11,17 +11,35 @@ Phase 1 focuses on implementing the core execution infrastructure of svarogIO: `
 
 ## 0. Contract Programming Setup
 
+### 0.0 Build System Configuration
+**Status**: ✅ Complete
+
+- ✅ CMakePresets.json configured with debug and release presets
+  - `build/debug/` - Debug build with `-DCMAKE_BUILD_TYPE=Debug`
+  - `build/release/` - Release build with `-DCMAKE_BUILD_TYPE=Release`
+- ✅ Ninja generator configured for fast builds
+- ✅ Build, test, and workflow presets defined
+- ✅ `enable_testing()` enabled in root CMakeLists.txt
+- ✅ CTest integration working correctly
+
+**Usage**:
+```bash
+# Debug development workflow
+cmake --preset debug && cmake --build --preset debug
+ctest --test-dir build/debug --output-on-failure
+
+# Release performance testing
+cmake --preset release && cmake --build --preset release
+ctest --test-dir build/release --output-on-failure
+```
+
 ### 0.1 GSL Integration
 **Estimated Time**: 1-2 days
+**Status**: ✅ Complete
 
-- ✅ Add GSL-Lite dependency to CMake
+- ✅ Add MS GSL dependency to CMake via CPM
   ```cmake
-  FetchContent_Declare(
-      gsl-lite
-      GIT_REPOSITORY https://github.com/gsl-lite/gsl-lite.git
-      GIT_TAG v0.41.0
-  )
-  FetchContent_MakeAvailable(gsl-lite)
+  CPMAddPackage("gh:microsoft/GSL@4.2.0")
   ```
 - ✅ Create `svarog/include/svarog/core/contracts.hpp`
   - ✅ Define `SVAROG_EXPECTS(condition)` macro
@@ -30,9 +48,31 @@ Phase 1 focuses on implementing the core execution infrastructure of svarogIO: `
   - ✅ Support both Debug and Release builds
   - ✅ Custom violation handler for better error messages
 
+**Build Commands**:
+```bash
+# Debug build (contracts enabled)
+cmake --preset debug
+cmake --build --preset debug
+ctest --test-dir build/debug --output-on-failure
+
+# Release build (contracts disabled by default)
+cmake --preset release
+cmake --build --preset release
+ctest --test-dir build/release --output-on-failure
+
+# Release build with contracts enabled (for validation)
+cmake --preset release -DSVAROG_ENABLE_CONTRACTS_IN_RELEASE=ON
+cmake --build --preset release
+ctest --test-dir build/release --output-on-failure
+
+# Complete workflow (configure + build + test)
+cmake --workflow --preset debug
+cmake --workflow --preset release
+```
+
 **Example Implementation**:
 ```cpp
-#include <gsl/gsl-lite.hpp>
+#include <gsl/gsl>
 
 namespace svarog::core {
 
@@ -55,13 +95,16 @@ namespace svarog::core {
 ```
 
 **Acceptance Criteria**:
-- GSL-Lite integrated successfully
-- Contracts header compiles on all platforms
-- Contracts enabled in Debug, disabled in Release (by default)
-- CMake option to enable contracts in Release builds
+- ✅ MS GSL integrated successfully (via CPM)
+- ✅ Contracts header compiles on all platforms
+- ✅ Contracts enabled in Debug, disabled in Release (by default)
+- ✅ CMake option to enable contracts in Release builds
+- ✅ CMake presets configured for `build/debug` and `build/release`
+- ✅ `enable_testing()` called in root CMakeLists.txt for proper CTest integration
 
 ### 0.2 Contract Policy Documentation
 **Estimated Time**: 1 day
+**Status**: ✅ Complete (pending team review)
 
 - ✅ Create `docs/CODING_STANDARDS.md`
 - ✅ Document when to use `SVAROG_EXPECTS` vs `std::expected`
@@ -74,9 +117,9 @@ namespace svarog::core {
 - ✅ Provide examples for each component
 
 **Acceptance Criteria**:
-- Clear guidelines for contract usage
-- Examples provided
-- Team reviewed and approved
+- ✅ Clear guidelines for contract usage
+- ✅ Examples provided
+- ✅ Team reviewed and approved
 
 ---
 

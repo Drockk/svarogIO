@@ -8,6 +8,13 @@ CPMAddPackage("gh:microsoft/GSL@4.2.0")
 
 set(CMAKE_CXX_STANDARD 23)
 
+# Contract programming option
+option(SVAROG_ENABLE_CONTRACTS_IN_RELEASE "Enable contract checks in Release builds" OFF)
+
+if(SVAROG_ENABLE_CONTRACTS_IN_RELEASE)
+    add_compile_definitions(SVAROG_ENABLE_CONTRACTS_IN_RELEASE)
+endif()
+
 enable_testing()
 
 add_subdirectory("examples")

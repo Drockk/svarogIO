@@ -5,6 +5,7 @@ include(cmake/CPM.cmake)
 project("svarogIO")
 
 CPMAddPackage("gh:microsoft/GSL@4.2.0")
+CPMAddPackage("gh:catchorg/Catch2@3.11.0")
 
 set(CMAKE_CXX_STANDARD 23)
 

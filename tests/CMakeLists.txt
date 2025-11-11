@@ -1,11 +1,16 @@
-add_executable(contracts_test
-    core/contracts_test.cpp
+#Unit tests for svarog project
+
+add_subdirectory("core")
+
+# Contracts Unit Tests
+add_executable(svarog_tests
+    execution/execution_context_tests.cpp
 )
 
-target_link_libraries(contracts_test
+target_link_libraries(svarog_tests
     PRIVATE
     svarog
-    Microsoft.GSL::GSL
+    Catch2::Catch2WithMain
 )
 
-add_test(NAME ContractsTest COMMAND contracts_test)
+add_test(NAME SvarogTests COMMAND svarog_tests)

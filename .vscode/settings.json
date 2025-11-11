@@ -78,7 +78,9 @@
         "util": "cpp",
         "zstring": "cpp",
         "complex": "cpp",
-        "regex": "cpp"
+        "regex": "cpp",
+        "ranges": "cpp",
+        "typeindex": "cpp"
     },
     "C_Cpp.default.cppStandard": "c++23",
     "C_Cpp.default.configurationProvider": "ms-vscode.cmake-tools",

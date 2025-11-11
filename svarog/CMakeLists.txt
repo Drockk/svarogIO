@@ -3,6 +3,7 @@ add_library("svarog" SHARED)
 target_sources(
   "svarog"
   PRIVATE
+    "source/svarog/execution/execution_context.cpp"
     "source/svarog/ip/ip_address.cpp"
     "source/svarog/ip/ip_address_v4.cpp"
     "source/svarog/network/socket.cpp"

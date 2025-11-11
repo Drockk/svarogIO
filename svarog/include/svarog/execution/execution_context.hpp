@@ -83,18 +83,23 @@ public:
      * @brief Retrieve a service from the registry.
      *
      * Returns a reference to the service of the specified type. If the service
-     * is not registered, throws std::out_of_range exception.
+     * is not registered, this violates the precondition and will trigger a
+     * contract violation in debug builds.
      *
      * Thread-safe: Multiple threads can safely call use_service() concurrently.
      *
      * @tparam Service The type of service to retrieve.
      * @return Reference to the registered service.
-     * @throws std::out_of_range if the service is not registered.
      *
      * @pre !stopped() - Cannot use services after the context has been stopped.
+     * @pre has_service<Service>() - Service must be registered before use.
      *
      * Example usage:
      * @code
+     * // First, register the service
+     * ctx.add_service(std::make_shared<MyService>());
+     * 
+     * // Then use it (precondition: service must exist)
      * auto& my_service = ctx.use_service<MyService>();
      * my_service.do_something();
      * @endcode
@@ -102,6 +107,8 @@ public:
     template<typename Service>
     Service& use_service() {
         SVAROG_EXPECTS(!stopped());
+        SVAROG_EXPECTS(has_service<Service>());  // Service must be registered
+        
         std::lock_guard lock(m_service_registry_mutex);
         return *std::static_pointer_cast<Service>(
             m_service_registry.at(std::type_index(typeid(Service))));

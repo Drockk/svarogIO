@@ -150,7 +150,9 @@ namespace svarog::core {
 - ✅ Complete Doxygen documentation for all public APIs
 - ✅ Design decision comments explaining architecture choices
 - ✅ Thread-safe service registry with mutex protection
-- ✅ Contract programming (`SVAROG_EXPECTS(!stopped())`)
+- ✅ Contract programming:
+  - ✅ `SVAROG_EXPECTS(!stopped())` in `use_service()`
+  - ✅ `SVAROG_EXPECTS(has_service<Service>())` prevents `std::out_of_range`
 - ✅ Type-safe service storage using `std::type_index`
 - ✅ Move-only semantic for execution contexts
 - ✅ Examples in documentation

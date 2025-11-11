@@ -64,19 +64,19 @@ jobs:
       working-directory: ${{ steps.strings.outputs.build-output-dir }}
       run: ctest --build-config ${{ matrix.build_type }} --output-on-failure --verbose
     
-    - name: Run Benchmarks (Release only)
-      if: matrix.build_type == 'Release'
-      working-directory: ${{ steps.strings.outputs.build-output-dir }}
-      run: |
-        ./svarog_benchmarks --benchmark-samples 1000 > benchmark_results_${{ matrix.c_compiler }}.txt
+    # - name: Run Benchmarks (Release only)
+    #   if: matrix.build_type == 'Release'
+    #   working-directory: ${{ steps.strings.outputs.build-output-dir }}
+    #   run: |
+    #     ./svarog_benchmarks --benchmark-samples 1000 > benchmark_results_${{ matrix.c_compiler }}.txt
     
-    - name: Upload Benchmark Results
-      if: matrix.build_type == 'Release'
-      uses: actions/upload-artifact@v4
-      with:
-        name: benchmark-results-${{ matrix.c_compiler }}-${{ steps.strings.outputs.timestamp }}
-        path: ${{ steps.strings.outputs.build-output-dir }}/benchmark_results_${{ matrix.c_compiler }}.txt
-        retention-days: 30
+    # - name: Upload Benchmark Results
+    #   if: matrix.build_type == 'Release'
+    #   uses: actions/upload-artifact@v4
+    #   with:
+    #     name: benchmark-results-${{ matrix.c_compiler }}-${{ steps.strings.outputs.timestamp }}
+    #     path: ${{ steps.strings.outputs.build-output-dir }}/benchmark_results_${{ matrix.c_compiler }}.txt
+    #     retention-days: 30
     
     - name: Upload Test Results
       if: failure()

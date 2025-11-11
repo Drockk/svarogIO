@@ -61,7 +61,7 @@ if (auto result = queue.try_pop()) {
 
 ### 2. std::move_only_function - Priority: 🔴 HIGH
 
-**Use Case:** Handlers with unique ownership (capturing unique_ptr).
+**Use Case 1:** Handlers with unique ownership (capturing unique_ptr).
 
 **After (C++23):**
 ```cpp
@@ -77,10 +77,56 @@ io_ctx.post([data = std::make_unique<large_data>()]() {
 });
 ```
 
+**Use Case 2:** Service Registry Lifecycle Management
+
+**After (C++23):**
+```cpp
+class execution_context {
+    // Service registry with type erasure
+    std::unordered_map<std::type_index, std::shared_ptr<void>> m_services;
+    
+    // Cleanup callbacks - move_only_function enables zero-overhead RAII
+    std::vector<std::move_only_function<void()>> m_cleanup_callbacks;
+    
+    template<typename Service, typename... Args>
+    Service& make_service(Args&&... args) {
+        auto service = std::make_shared<Service>(std::forward<Args>(args)...);
+        Service& service_ref = *service;  // Get ref BEFORE move
+        
+        // Cleanup callback captures service by value (shared ownership)
+        m_cleanup_callbacks.emplace_back([service = std::move(service)]() mutable {
+            if constexpr (HasShutdownHook<Service>) {
+                service->on_shutdown();
+            }
+            service.reset();  // Explicit destruction
+        });
+        
+        return service_ref;
+    }
+};
+```
+
 **Benefits:**
-- Zero overhead: no ref counting
-- RAII semantics: clear ownership
+- Zero overhead: no ref counting for callbacks themselves
+- RAII semantics: clear ownership in cleanup lambdas
 - Larger SBO buffer (typically 32 bytes vs 16 for std::function)
+- **Unified storage:** Single vector replaces multiple data structures
+- **Move-only captures:** Lambdas can capture unique resources
+
+**Key Advantage over std::function:**
+
+Before (would require shared_ptr for std::function):
+```cpp
+// std::function requires copyable - forces shared_ptr overhead everywhere
+std::vector<std::function<void()>> callbacks;  // ❌ Requires copying
+```
+
+After (move-only semantics):
+```cpp
+// move_only_function allows move-only captures directly
+std::vector<std::move_only_function<void()>> callbacks;  // ✅ Zero overhead
+callbacks.emplace_back([ptr = std::make_unique<T>()]() { /* ... */ });
+```
 
 **Availability:** GCC 12+, Clang 16+, MSVC 19.32+
 
@@ -199,7 +245,11 @@ void strand::post(std::move_only_function<void()> handler) {
 ### Positive
 
 1. **std::expected:** Type-safe error handling, monadic operations, zero-overhead
-2. **std::move_only_function:** Clean unique ownership, no shared_ptr overhead
+2. **std::move_only_function:** 
+   - Clean unique ownership, no shared_ptr overhead for handlers
+   - Enables zero-overhead RAII patterns in service registry
+   - Unified storage for cleanup callbacks (single vector replaces multiple structures)
+   - Move-only lambda captures without heap allocation
 3. **Modern C++:** More readable code, less boilerplate, future-proof
 
 ### Negative
@@ -257,8 +307,33 @@ read_socket()
 
 - [ADR-001](ADR-001-boost-asio-architecture-en.md) - std::move_only_function for handlers
 - [ADR-002](ADR-002-remove-lockfree-ring-buffer-en.md) - std::expected in work_queue API
+- [ADR-005](ADR-005-contract-programming.md) - Contracts complement std::expected for error handling
+
+## Implementation Notes
+
+### std::move_only_function in execution_context
+
+The service registry implementation (completed 2025-11-11) demonstrates the power of `std::move_only_function` for lifecycle management:
+
+**Pattern:** Type erasure + RAII cleanup
+```cpp
+// Service stored as void* with type_index key
+std::unordered_map<std::type_index, std::shared_ptr<void>> m_services;
+
+// Cleanup callbacks with zero-overhead move semantics
+std::vector<std::move_only_function<void()>> m_cleanup_callbacks;
+```
+
+**Key Implementation Details:**
+1. **Reverse destruction:** Cleanup callbacks executed in reverse order (LIFO)
+2. **Shutdown hooks:** Optional `on_shutdown()` method detected via C++23 concepts
+3. **Memory safety:** Reference obtained before move to avoid dangling references
+4. **Thread safety:** Mutex-protected service registration
+
+This pattern will be reused in `io_context`, `strand`, and `work_queue` for consistent lifecycle management across the library.
 
 ---
 
 **Approved by:** drock  
-**Implementation Status:** Phase 1 - Ready to implement
+**Implementation Status:** Phase 1 - std::expected and std::move_only_function in use (execution_context complete)
+**Last Updated:** 2025-11-11

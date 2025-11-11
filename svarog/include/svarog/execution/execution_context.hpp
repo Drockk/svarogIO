@@ -37,8 +37,18 @@ concept HasShutdownHook = requires(T t) {
  *
  * Inspired by Boost.Asio's io_context service model.
  *
+ * @invariant Class invariants (maintained throughout object lifetime):
+ * - **Service Lifecycle**: Services are destroyed in reverse creation order during context destruction
+ * - **Shutdown Hook Execution**: If a service has on_shutdown(), it is called before service destruction
+ * - **Registry Consistency**: Service registry and cleanup callbacks are always synchronized
+ * - **Thread Safety**: All service registry operations are protected by mutex
+ * - **Type Safety**: Each service type can only be registered once per context (singleton pattern)
+ * - **Memory Safety**: Services are kept alive via shared_ptr until all cleanup callbacks execute
+ * - **State Consistency**: stopped() state is independent of service registry state
+ *
  * @note All service registry operations are thread-safe.
  * @note Derived classes must implement stop(), restart(), and stopped() methods.
+ * @note Service registration can occur even when stopped(), but use_service() requires !stopped()
  */
 class execution_context {
 public:
@@ -72,7 +82,9 @@ public:
      *
      * @post stopped() returns true after this call completes.
      */
-    virtual void stop() = 0;
+    virtual void stop() {
+        SVAROG_EXPECTS(!stopped());
+    }
 
     /**
      * @brief Restart the execution context after it has been stopped.
@@ -83,8 +95,9 @@ public:
      * @pre stopped() must return true before calling restart().
      * @post stopped() returns false after restart completes.
      */
-    virtual void restart() = 0;
-
+    virtual void restart() {
+        SVAROG_ENSURES(!stopped());
+    }
     /**
      * @brief Check if the execution context has been stopped.
      *

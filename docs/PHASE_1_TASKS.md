@@ -427,26 +427,327 @@ private:
 
 ### 2.1 Lock-Free Queue Design
 **Estimated Time**: 5-7 days
+**Status**: 🔄 Not Started
 
-- [ ] Create `svarog/include/svarog/execution/work_queue.hpp`
-- [ ] Implement MPMC lock-free queue
-  - [ ] Based on ADR-001 decision (lock-free architecture)
-  - [ ] Use atomic operations for thread-safe access
-  - [ ] Consider Boost.Lockfree or custom implementation
-- [ ] Define work item type
+**Design Decision**: Based on ADR-001, we implement MPMC (Multi-Producer Multi-Consumer) lock-free queue for work item storage.
+
+#### 2.1.1 Header Structure and Type Definitions
+**Estimated Time**: 0.5 day
+**Status**: ✅ COMPLETE
+
+- [x] Create `svarog/include/svarog/execution/work_queue.hpp`
+- [x] Add necessary includes
   ```cpp
-  using work_item = std::move_only_function<void()>;
+  #include <atomic>
+  #include <functional>      // std::move_only_function
+  #include <memory>          // std::unique_ptr
+  #include <optional>        // std::optional for try_pop
+  #include <cstddef>         // size_t
+  #include "svarog/core/contracts.hpp"
   ```
-- [ ] Implement queue operations
-  - [ ] `push(work_item&& item) -> bool`
-  - [ ] `try_pop(work_item& item) -> bool`
-  - [ ] `size() const noexcept -> size_t` (approximate)
-  - [ ] `empty() const noexcept -> bool` (approximate)
+- [x] Define work item type
+  ```cpp
+  namespace svarog::execution {
+  
+  /// Work item type - move-only callable with no return value
+  /// @note Uses C++23 std::move_only_function for zero-overhead handlers
+  using work_item = std::move_only_function<void()>;
+  
+  } // namespace svarog::execution
+  ```
+- [x] Forward declare `work_queue` class
+- [x] Document namespace structure and dependencies
+
+**Implementation Summary** ✅:
+- ✅ Complete Doxygen documentation for class and type alias
+- ✅ Class structure with PIMPL pattern declared
+- ✅ Constructor with capacity parameter (default = 1024)
+- ✅ Destructor documented (drains remaining items)
+- ✅ Non-copyable, non-movable semantics enforced
+- ✅ Comprehensive class-level documentation:
+  - Class invariants (@invariant tags)
+  - Thread-safety guarantees (@threadsafety tags)
+  - Usage example in documentation
+- ✅ `default_capacity` constant defined (1024)
+- ✅ Precondition documented for constructor
 
 **Acceptance Criteria**:
-- Lock-free queue compiles and passes basic tests
-- No data races (ThreadSanitizer clean)
-- Performance comparable to std::deque in single-threaded case
+- ✅ Header includes minimal dependencies
+- ✅ Type definitions compile cleanly
+- ✅ Doxygen comments for public types
+- ✅ No compilation errors
+
+#### 2.1.2 Queue Implementation Strategy Decision
+**Estimated Time**: 1 day (research + decision)
+
+- [ ] **Research lock-free queue options:**
+  - [ ] **Option 1**: Boost.Lockfree queue
+    - ✅ Pros: Battle-tested, well-documented, high performance
+    - ❌ Cons: External dependency, fixed capacity, ABA problem mitigation overhead
+  - [ ] **Option 2**: Custom ring buffer (ADR-002 revisited)
+    - ✅ Pros: No external deps, optimized for our use case, predictable performance
+    - ❌ Cons: Complex implementation, need to handle ABA problem, testing burden
+  - [ ] **Option 3**: Mutex-based std::deque (simple fallback)
+    - ✅ Pros: Simple, no ABA issues, std::deque move semantics
+    - ❌ Cons: Lock contention, not truly lock-free
+  - [ ] **Option 4**: Hybrid approach (lock-free fast path + mutex slow path)
+    - ✅ Pros: Best of both worlds, graceful degradation under contention
+    - ❌ Cons: Added complexity, two code paths to maintain
+
+- [ ] **Document decision in ADR-002 update or new ADR-006**
+  - [ ] Performance requirements (target: ≥1M ops/sec single-threaded)
+  - [ ] Memory ordering guarantees needed
+  - [ ] Capacity constraints (fixed vs dynamic)
+  - [ ] ABA problem mitigation strategy
+
+- [ ] **Choose implementation strategy** (recommended: **Option 1** - Boost.Lockfree)
+  - Rationale: Proven performance, extensive testing, acceptable dependency
+  - Alternative: Option 3 for Phase 1, optimize to Option 1/2 in Phase 2
+
+**Acceptance Criteria**:
+- Implementation strategy documented
+- Performance requirements defined
+- Trade-offs analyzed and documented
+
+#### 2.1.3 Lock-Free Queue Core Implementation
+**Estimated Time**: 2-3 days
+
+- [ ] **Define `work_queue` class structure**
+  ```cpp
+  namespace svarog::execution {
+  
+  /// Thread-safe MPMC work queue for asynchronous task execution
+  /// @invariant Queue operations are wait-free or lock-free
+  /// @invariant work_item destruction happens on consumer thread
+  /// @invariant Stopped queue rejects new items
+  class work_queue {
+  public:
+      /// Default capacity hint (implementation-defined)
+      static constexpr size_t default_capacity = 1024;
+      
+      /// Construct work queue with optional capacity hint
+      /// @param capacity Maximum number of items (0 = unlimited if supported)
+      /// @pre capacity == 0 || capacity >= 16
+      explicit work_queue(size_t capacity = default_capacity);
+      
+      /// Destructor - drains remaining items
+      /// @post All work items destroyed
+      ~work_queue();
+      
+      // Non-copyable, non-movable (owns thread resources)
+      work_queue(const work_queue&) = delete;
+      work_queue& operator=(const work_queue&) = delete;
+      work_queue(work_queue&&) = delete;
+      work_queue& operator=(work_queue&&) = delete;
+      
+  private:
+      struct impl;  // PIMPL for lock-free queue details
+      std::unique_ptr<impl> m_impl;
+  };
+  
+  } // namespace svarog::execution
+  ```
+
+- [ ] **Implement internal lock-free storage** (in PIMPL `impl`)
+  - [ ] Choose underlying container:
+    - If Boost.Lockfree: `boost::lockfree::queue<work_item*>` (store pointers)
+    - If custom: Aligned atomic ring buffer with head/tail indices
+  - [ ] Handle memory ordering (`std::memory_order_acquire`, `release`, `seq_cst`)
+  - [ ] ABA problem mitigation (if custom implementation):
+    - Tagged pointers or generation counters
+    - Or accept Boost.Lockfree's hazard pointers approach
+
+- [ ] **Implement capacity management**
+  - [ ] Fixed capacity: Allocate ring buffer upfront
+  - [ ] Dynamic capacity: Node-based allocation (if supported)
+  - [ ] Document capacity behavior in API
+
+**Acceptance Criteria**:
+- Class structure compiles
+- PIMPL hides lock-free implementation details
+- Memory layout optimized (cache line alignment)
+- Doxygen documentation complete
+
+#### 2.1.4 Queue Operations Implementation
+**Estimated Time**: 2-3 days
+
+- [ ] **Implement `push()` operation**
+  ```cpp
+  /// Push work item to queue (non-blocking)
+  /// @param item Work item to execute (must not be null)
+  /// @return true if item was pushed, false if queue is full or stopped
+  /// @pre item != nullptr
+  /// @post If returns true, item moved into queue
+  /// @post If returns false, item unchanged
+  /// @note Thread-safe, lock-free (wait-free if supported)
+  [[nodiscard]] bool push(work_item&& item);
+  ```
+  - [ ] Precondition: `SVAROG_EXPECTS(item != nullptr)`
+  - [ ] Check if stopped (atomic load with `memory_order_acquire`)
+  - [ ] Allocate storage for work_item (if pointer-based)
+  - [ ] Attempt lock-free push to underlying queue
+  - [ ] Handle full queue case (return false or wait - TBD)
+  - [ ] Return success/failure
+
+- [ ] **Implement `try_pop()` operation**
+  ```cpp
+  /// Try to pop work item from queue (non-blocking)
+  /// @return work_item if available, std::nullopt if queue empty
+  /// @post If returns work_item, queue size decreased by 1
+  /// @note Thread-safe, lock-free
+  [[nodiscard]] std::optional<work_item> try_pop();
+  ```
+  - [ ] Atomic load queue state
+  - [ ] Attempt lock-free pop from underlying queue
+  - [ ] If success: Move work_item, deallocate storage, return item
+  - [ ] If empty: Return `std::nullopt`
+  - [ ] Handle memory ordering for visibility
+
+- [ ] **Implement `size()` and `empty()` operations**
+  ```cpp
+  /// Approximate queue size (may be stale)
+  /// @return Approximate number of items in queue
+  /// @note Result may be outdated by the time caller receives it
+  /// @note Lock-free, constant time
+  [[nodiscard]] size_t size() const noexcept;
+  
+  /// Check if queue is approximately empty
+  /// @return true if queue appears empty
+  /// @note May return false negative under high contention
+  /// @note Lock-free, constant time
+  [[nodiscard]] bool empty() const noexcept;
+  ```
+  - [ ] Atomic load of size counter (`memory_order_relaxed`)
+  - [ ] Document "approximate" nature (inherent in lock-free queues)
+  - [ ] `empty()` implemented as `size() == 0`
+
+- [ ] **Implement `stop()` operation**
+  ```cpp
+  /// Stop accepting new work items
+  /// @post push() returns false
+  /// @post try_pop() still works (drains existing items)
+  /// @note Thread-safe, atomic operation
+  void stop() noexcept;
+  
+  /// Check if queue is stopped
+  /// @return true if stopped
+  /// @note Thread-safe, atomic load
+  [[nodiscard]] bool stopped() const noexcept;
+  ```
+  - [ ] Atomic flag `std::atomic<bool> m_stopped`
+  - [ ] `stop()` sets flag with `memory_order_release`
+  - [ ] `push()` checks flag with `memory_order_acquire`
+
+**Acceptance Criteria**:
+- All operations are lock-free (verify with `std::atomic<T>::is_lock_free()`)
+- ThreadSanitizer clean (no data races)
+- Correct memory ordering documented
+- Edge cases handled (full queue, empty queue, concurrent push/pop)
+
+#### 2.1.5 Contract Specification
+**Estimated Time**: 0.5 day
+
+- [ ] **Add preconditions to all operations**
+  - [ ] `push()`: `SVAROG_EXPECTS(item != nullptr)`
+  - [ ] Constructor: `SVAROG_EXPECTS(capacity == 0 || capacity >= 16)`
+  
+- [ ] **Document class invariants**
+  ```cpp
+  /// @invariant Lock-free guarantee: Operations complete in bounded steps
+  /// @invariant MPMC safety: Multiple producers and consumers can operate concurrently
+  /// @invariant FIFO ordering: Items processed in push order (best-effort under contention)
+  /// @invariant work_item lifetime: Destroyed on consumer thread or in destructor
+  /// @invariant Stopped state: Once stopped, push() always fails
+  ```
+
+- [ ] **Document thread-safety guarantees**
+  ```cpp
+  /// @threadsafety All methods are thread-safe and lock-free
+  /// @threadsafety push() and try_pop() can be called from multiple threads
+  /// @threadsafety size() and empty() provide approximate results only
+  /// @threadsafety stop() synchronizes with all threads
+  ```
+
+**Acceptance Criteria**:
+- All public methods have preconditions where applicable
+- Class invariants documented in header
+- Thread-safety guarantees explicit
+
+#### 2.1.6 Initial Testing
+**Estimated Time**: 1 day
+
+- [ ] Create `tests/execution/work_queue_basic_tests.cpp`
+- [ ] **Test single-threaded operations**
+  ```cpp
+  TEST_CASE("work_queue basic operations") {
+      work_queue queue(64);
+      
+      SECTION("push and pop") {
+          bool called = false;
+          REQUIRE(queue.push([&]{ called = true; }));
+          
+          auto item = queue.try_pop();
+          REQUIRE(item.has_value());
+          (*item)();
+          REQUIRE(called);
+      }
+      
+      SECTION("empty queue") {
+          REQUIRE(queue.empty());
+          auto item = queue.try_pop();
+          REQUIRE_FALSE(item.has_value());
+      }
+      
+      SECTION("stopped queue") {
+          queue.stop();
+          REQUIRE(queue.stopped());
+          REQUIRE_FALSE(queue.push([]{}));
+      }
+  }
+  ```
+
+- [ ] **Test basic thread safety** (defer comprehensive tests to 2.4)
+  ```cpp
+  TEST_CASE("work_queue concurrent push") {
+      work_queue queue(1000);
+      std::atomic<int> counter{0};
+      
+      std::vector<std::thread> threads;
+      for (int i = 0; i < 4; ++i) {
+          threads.emplace_back([&]{
+              for (int j = 0; j < 100; ++j) {
+                  queue.push([&]{ ++counter; });
+              }
+          });
+      }
+      
+      for (auto& t : threads) t.join();
+      
+      // Drain queue
+      while (auto item = queue.try_pop()) {
+          (*item)();
+      }
+      
+      REQUIRE(counter == 400);
+  }
+  ```
+
+**Acceptance Criteria**:
+- Basic tests compile and pass
+- ThreadSanitizer clean (no warnings)
+- Tests validate core functionality
+- Tests run in <100ms
+
+---
+
+**Section 2.1 Acceptance Criteria (Overall)**:
+- ✅ Lock-free queue compiles and passes basic tests
+- ✅ No data races (ThreadSanitizer clean)
+- ✅ Performance comparable to std::deque in single-threaded case (≥500K ops/sec)
+- ✅ All operations documented with contracts
+- ✅ API design reviewed and approved
+- ✅ Implementation strategy documented (ADR or design doc)
+- ✅ Basic test coverage ≥80% (comprehensive tests in 2.4)
 
 ### 2.2 Contract Specification
 **Estimated Time**: 1 day

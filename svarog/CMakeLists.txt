@@ -15,6 +15,7 @@ target_sources(
     FILES
       "include/svarog/core/contracts.hpp"
       "include/svarog/execution/execution_context.hpp"
+      "include/svarog/execution/work_queue.hpp"
       "include/svarog/ip/ip_address.hpp"
       "include/svarog/ip/ip_address_v4.hpp"
       "include/svarog/network/socket.hpp"

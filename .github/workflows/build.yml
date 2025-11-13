@@ -6,8 +6,49 @@ on:
     branches: [ "main" ]
 
 jobs:
+  format-check:
+    runs-on: ubuntu-latest
+    name: Code Format Check
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Install clang-format
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y clang-format
+    
+    - name: Check C++ code formatting
+      run: |
+        echo "Checking code formatting with clang-format..."
+        
+        # Find all C++ files and check formatting
+        FAILED=0
+        while IFS= read -r file; do
+          if ! clang-format --dry-run --Werror "$file" 2>&1; then
+            echo "❌ Format check failed for: $file"
+            FAILED=1
+          fi
+        done < <(find svarog tests examples -type f \( -name "*.cpp" -o -name "*.hpp" -o -name "*.h" \))
+        
+        if [ $FAILED -eq 1 ]; then
+          echo ""
+          echo "================================================"
+          echo "Code formatting issues detected!"
+          echo "================================================"
+          echo ""
+          echo "Please run the following command to fix formatting:"
+          echo "  find svarog tests examples -type f \\( -name \"*.cpp\" -o -name \"*.hpp\" \\) -exec clang-format -i {} \\;"
+          echo ""
+          echo "Or let your IDE format on save (see .vscode/settings.json)"
+          exit 1
+        fi
+        
+        echo "✅ All files are properly formatted!"
+
   build-and-test:
     runs-on: ${{ matrix.os }}
+    needs: format-check
 
     strategy:
       fail-fast: false

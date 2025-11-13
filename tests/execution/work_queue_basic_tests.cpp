@@ -1,19 +1,16 @@
 #include <atomic>
-#include <catch2/catch_test_macros.hpp>
-#include <svarog/execution/work_queue.hpp>
 #include <thread>
 #include <vector>
 
-TEST_CASE("work_queue basic operations")
-{
+#include <catch2/catch_test_macros.hpp>
+#include <svarog/execution/work_queue.hpp>
+
+TEST_CASE("work_queue basic operations") {
     svarog::execution::work_queue queue;
 
-    SECTION("push and try pop")
-    {
+    SECTION("push and try pop") {
         bool called = false;
-        REQUIRE(queue.push(
-            [&] { called = true; }
-        ));
+        REQUIRE(queue.push([&] { called = true; }));
 
         auto result = queue.try_pop();
         REQUIRE(result.has_value());
@@ -21,28 +18,25 @@ TEST_CASE("work_queue basic operations")
         REQUIRE(called);
     }
 
-    SECTION("empty queue")
-    {
+    SECTION("empty queue") {
         REQUIRE(queue.empty());
         auto result = queue.try_pop();
         REQUIRE_FALSE(result.has_value());
         REQUIRE(result.error() == svarog::execution::queue_error::empty);
     }
 
-    SECTION("stopped queue")
-    {
+    SECTION("stopped queue") {
         queue.stop();
         REQUIRE(queue.stopped());
         REQUIRE_FALSE(queue.push([] {}));
-        
+
         auto result = queue.try_pop();
         REQUIRE_FALSE(result.has_value());
         REQUIRE(result.error() == svarog::execution::queue_error::stopped);
     }
 }
 
-TEST_CASE("work_queue concurrent push")
-{
+TEST_CASE("work_queue concurrent push") {
     svarog::execution::work_queue queue;
     std::atomic<int> counter{0};
 

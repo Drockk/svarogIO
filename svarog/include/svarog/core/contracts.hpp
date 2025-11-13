@@ -1,7 +1,8 @@
 #pragma once
 
-#include <gsl/assert>
 #include <cassert>
+
+#include <gsl/assert>
 
 namespace svarog::core {
 #ifdef SVAROG_ENABLE_CONTRACTS_IN_RELEASE
@@ -18,4 +19,4 @@ namespace svarog::core {
 #endif
 
 #define SVAROG_ASSERT(cond) assert(cond)
-} // namespace svarog::core
+}  // namespace svarog::core

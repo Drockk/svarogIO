@@ -1,12 +1,12 @@
 #include <array>
 #include <iostream>
 #include <string>
+
 #include <netinet/in.h>
 #include <sys/socket.h>
 #include <unistd.h>
 
-int main ()
-{
+int main() {
     const auto clientSocket = socket(AF_INET, SOCK_STREAM, 0);
 
     sockaddr_in serverAddress{};

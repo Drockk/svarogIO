@@ -12,4 +12,4 @@ execution_context::~execution_context() {
     }
 }
 
-} // namespace svarog::execution
+}  // namespace svarog::execution

@@ -3,24 +3,20 @@
 // pal_tasks is licensed under the MIT License
 #pragma once
 
-#include <coroutine>
 #include <cstddef>
 #include <memory>
 
-namespace svarog::task
-{
+#include <coroutine>
+
+namespace svarog::task {
 struct TaskPromise;
 
-struct Task
-    : std::coroutine_handle<TaskPromise>
-{
+struct Task : std::coroutine_handle<TaskPromise> {
     using promise_type = svarog::task::TaskPromise;
 };
 
-struct suspend_task
-{
-    constexpr bool await_ready() noexcept
-    {
+struct suspend_task {
+    constexpr bool await_ready() noexcept {
         return false;
     }
 
@@ -28,10 +24,8 @@ struct suspend_task
     void await_resume() noexcept {};
 };
 
-struct finalize_task
-{
-    constexpr bool await_ready() noexcept
-    {
+struct finalize_task {
+    constexpr bool await_ready() noexcept {
         return false;
     }
 
@@ -43,28 +37,25 @@ class scheduler_impl;
 class task_list_o;
 class TaskList;
 
-class Scheduler
-{
+class Scheduler {
 public:
     Scheduler(const size_t t_number_worker_threads);
     ~Scheduler();
 
     void wait_for_task_list(TaskList& t_taskList);
 
-    static std::unique_ptr<Scheduler>
-        create(const size_t t_number_worker_threads = 0);
+    static std::unique_ptr<Scheduler> create(const size_t t_number_worker_threads = 0);
 
 private:
-    Scheduler(const Scheduler&)             = delete;
-    Scheduler(Scheduler&&)                  = delete;
-    Scheduler& operator=(const Scheduler&)  = delete;
-    Scheduler& operator=(Scheduler&)        = delete;
+    Scheduler(const Scheduler&) = delete;
+    Scheduler(Scheduler&&) = delete;
+    Scheduler& operator=(const Scheduler&) = delete;
+    Scheduler& operator=(Scheduler&) = delete;
 
-    scheduler_impl* m_impl{ nullptr };
+    scheduler_impl* m_impl{nullptr};
 };
 
-class TaskList
-{
+class TaskList {
 public:
     TaskList(size_t t_hint_capacity = 1);
     ~TaskList();
@@ -74,34 +65,30 @@ public:
     friend class scheduler_impl;
 
 private:
-    TaskList(const TaskList&)               = delete;
-    TaskList(TaskList&&)                    = delete;
-    TaskList& operator=(const TaskList&)    = delete;
-    TaskList& operator=(TaskList&)          = delete;
+    TaskList(const TaskList&) = delete;
+    TaskList(TaskList&&) = delete;
+    TaskList& operator=(const TaskList&) = delete;
+    TaskList& operator=(TaskList&) = delete;
 
-    task_list_o* m_impl{ nullptr };
+    task_list_o* m_impl{nullptr};
 };
 
-struct TaskPromise
-{
-Task get_return_object()
-{
-    return { Task::from_promise(*this) };
-}
+struct TaskPromise {
+    Task get_return_object() {
+        return {Task::from_promise(*this)};
+    }
 
-std::suspend_always initial_suspend() noexcept
-{
-    return {};
-}
+    std::suspend_always initial_suspend() noexcept {
+        return {};
+    }
 
-finalize_task final_suspend() noexcept
-{
-    return {};
-}
-void return_void() {};
-void unhandled_exception(){};
+    finalize_task final_suspend() noexcept {
+        return {};
+    }
+    void return_void() {};
+    void unhandled_exception() {};
 
-scheduler_impl* scheduler   = nullptr;
-task_list_o*    p_task_list = nullptr;
+    scheduler_impl* scheduler = nullptr;
+    task_list_o* p_task_list = nullptr;
 };
-} // namespace svarog::task
+}  // namespace svarog::task

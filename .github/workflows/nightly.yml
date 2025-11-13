@@ -7,10 +7,50 @@ on:
     # Using 22:00 UTC to be safe for winter time
     - cron: '0 22 * * *'
   workflow_dispatch: # Allow manual trigger
+  push:
+    branches:
+      - main  # Run on any push to main branch
 
 jobs:
+  check-changes:
+    runs-on: ubuntu-latest
+    outputs:
+      should_run: ${{ steps.check.outputs.should_run }}
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 2  # Need at least 2 commits to compare
+    
+    - name: Check for changes in last 24 hours
+      id: check
+      run: |
+        # For manual dispatch or push events, always run
+        if [ "${{ github.event_name }}" != "schedule" ]; then
+          echo "should_run=true" >> "$GITHUB_OUTPUT"
+          echo "Running due to manual trigger or push event"
+          exit 0
+        fi
+        
+        # For scheduled runs, check if there were commits to main in last 24 hours
+        LAST_COMMIT_TIME=$(git log -1 --format=%ct origin/main)
+        CURRENT_TIME=$(date +%s)
+        TIME_DIFF=$((CURRENT_TIME - LAST_COMMIT_TIME))
+        HOURS_DIFF=$((TIME_DIFF / 3600))
+        
+        echo "Last commit was $HOURS_DIFF hours ago"
+        
+        if [ $HOURS_DIFF -le 24 ]; then
+          echo "should_run=true" >> "$GITHUB_OUTPUT"
+          echo "Found changes in last 24 hours, running nightly build"
+        else
+          echo "should_run=false" >> "$GITHUB_OUTPUT"
+          echo "No changes in last 24 hours, skipping nightly build"
+        fi
+
   nightly-full-build:
     runs-on: ${{ matrix.os }}
+    needs: check-changes
+    if: needs.check-changes.outputs.should_run == 'true'
     
     strategy:
       fail-fast: false
@@ -88,6 +128,8 @@ jobs:
   
   sanitizers:
     runs-on: ubuntu-latest
+    needs: check-changes
+    if: needs.check-changes.outputs.should_run == 'true'
     
     strategy:
       fail-fast: false

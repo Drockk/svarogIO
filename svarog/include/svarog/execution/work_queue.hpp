@@ -1,16 +1,17 @@
 #pragma once
 
 #include <atomic>
-#include <expected>        // std::expected, std::unexpect
-#include <functional>      // std::move_only_function
-#include <memory>          // std::unique_ptr
-#include <cstddef>         // size_t
+#include <cstddef>     // size_t
+#include <functional>  // std::move_only_function
+#include <memory>      // std::unique_ptr
+
 #include "svarog/core/contracts.hpp"
+
+#include <expected>  // std::expected, std::unexpect
 
 class work_queue_impl;
 
-namespace svarog::execution
-{
+namespace svarog::execution {
 
 /// Work item type - move-only callable with no return value
 /// @note Uses C++23 std::move_only_function for zero-overhead handlers
@@ -18,10 +19,9 @@ namespace svarog::execution
 using work_item = std::move_only_function<void()>;
 
 /// Error codes for work_queue operations
-enum class queue_error
-{
-    empty,      ///< Queue is empty
-    stopped     ///< Queue is stopped
+enum class queue_error {
+    empty,   ///< Queue is empty
+    stopped  ///< Queue is stopped
 };
 
 /// Thread-safe MPMC work queue for asynchronous task execution
@@ -46,11 +46,11 @@ enum class queue_error
 /// @par Example Usage:
 /// @code
 /// work_queue queue;
-/// 
+///
 /// // Producer thread
 /// queue.push([] { std::cout << "Task 1\n"; });
 /// queue.push([] { std::cout << "Task 2\n"; });
-/// 
+///
 /// // Consumer thread
 /// while (auto result = queue.try_pop()) {
 ///     if (result) {
@@ -60,15 +60,14 @@ enum class queue_error
 ///     }
 ///     // queue_error::empty - try again
 /// }
-/// 
+///
 /// // Graceful shutdown
 /// queue.stop();
 /// @endcode
 ///
 /// @see work_item
 /// @see execution_context
-class work_queue
-{
+class work_queue {
 public:
     /// Construct work queue
     ///
@@ -93,7 +92,7 @@ public:
     work_queue(const work_queue&) = delete;
     /// Non-copyable (owns unique resources)
     work_queue& operator=(const work_queue&) = delete;
-    
+
     /// Non-movable (thread resources tied to this instance)
     work_queue(work_queue&&) = delete;
     /// Non-movable (thread resources tied to this instance)
@@ -167,4 +166,4 @@ private:
     std::unique_ptr<work_queue_impl> m_impl;
 };
 
-} // namespace svarog::execution
+}  // namespace svarog::execution

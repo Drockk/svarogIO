@@ -9,8 +9,7 @@
 #include <svarog/ip/ip_address.hpp>
 #include <svarog/ip/ip_address_v4.hpp>
 
-int main ()
-{
+int main() {
     const auto ip_address = svarog::ip::make_ip_address_v4("127.0.0.1");
     const auto ip_address1 = svarog::ip::make_ip_address_v4(std::string("127.0.5.1"));
     const auto ip_address2 = svarog::ip::make_ip_address_v4(std::string_view("127.0.0.1"));
@@ -35,7 +34,8 @@ int main ()
 
     // recv(clientSocket, buffer.data(), buffer.size(), 0);
 
-    // std::cout << "Received data from client: " << std::string(reinterpret_cast<char*>(buffer.data()), buffer.size()) << std::endl;
+    // std::cout << "Received data from client: " << std::string(reinterpret_cast<char*>(buffer.data()), buffer.size())
+    // << std::endl;
 
     // close(serverSocket);
     return 0;

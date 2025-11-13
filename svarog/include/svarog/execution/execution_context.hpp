@@ -1,7 +1,5 @@
 #pragma once
 
-#include "svarog/core/contracts.hpp"
-
 #include <functional>
 #include <memory>
 #include <mutex>
@@ -9,15 +7,17 @@
 #include <unordered_map>
 #include <vector>
 
+#include "svarog/core/contracts.hpp"
+
 namespace svarog::execution {
 
 /**
  * @brief Concept to check if a service has a shutdown hook.
- * 
+ *
  * A service satisfies this concept if it has a callable on_shutdown() method
  * that returns void. This hook will be called during execution context destruction.
  */
-template<typename T>
+template <typename T>
 concept HasShutdownHook = requires(T t) {
     { t.on_shutdown() } -> std::same_as<void>;
 };
@@ -124,20 +124,19 @@ public:
      * @code
      * // First, register the service
      * ctx.add_service(std::make_shared<MyService>());
-     * 
+     *
      * // Then use it (precondition: service must exist)
      * auto& my_service = ctx.use_service<MyService>();
      * my_service.do_something();
      * @endcode
      */
-    template<typename Service>
+    template <typename Service>
     Service& use_service() {
         SVAROG_EXPECTS(!stopped());
         SVAROG_EXPECTS(has_service<Service>());  // Service must be registered
-        
+
         std::lock_guard lock(m_service_registry_mutex);
-        return *std::static_pointer_cast<Service>(
-            m_service_registry.at(std::type_index(typeid(Service))));
+        return *std::static_pointer_cast<Service>(m_service_registry.at(std::type_index(typeid(Service))));
     }
 
     /**
@@ -166,30 +165,30 @@ public:
      *         // Cleanup code
      *     }
      * };
-     * 
+     *
      * auto service = std::make_shared<MyService>();
      * ctx.add_service(service);
      * // on_shutdown() will be called automatically during context destruction
      * @endcode
      */
-    template<typename Service>
+    template <typename Service>
     void add_service(std::shared_ptr<Service> t_service) {
         SVAROG_EXPECTS(t_service != nullptr);
-        
+
         std::lock_guard lock(m_service_registry_mutex);
-        
+
         auto type_idx = std::type_index(typeid(Service));
-        
+
         // Check if service already exists - if so, we need to replace it
         auto [it, inserted] = m_service_registry.try_emplace(type_idx, t_service);
-        
+
         if (!inserted) {
             // Service already exists - replace it
             it->second = t_service;
             // Note: Old cleanup callback will still run but with expired shared_ptr
             // which is safe - it will just do nothing
         }
-        
+
         // Create cleanup callback that handles shutdown hook and destruction
         // Copy shared_ptr into lambda to extend lifetime
         m_cleanup_callbacks.push_back([service = t_service]() mutable {
@@ -218,12 +217,10 @@ public:
      * }
      * @endcode
      */
-    template<typename Service>
+    template <typename Service>
     bool has_service() const noexcept {
         std::lock_guard lock(m_service_registry_mutex);
-        return m_service_registry.contains(
-            std::type_index(typeid(Service))
-        );
+        return m_service_registry.contains(std::type_index(typeid(Service)));
     }
 
     /**
@@ -248,14 +245,14 @@ public:
      * public:
      *     MyService(int port, std::string name) { ... }
      * };
-     * 
+     *
      * auto& service = ctx.make_service<MyService>(8080, "server");
      * @endcode
      */
-    template<typename Service, typename... Args>
+    template <typename Service, typename... Args>
     Service& make_service(Args&&... args) {
         SVAROG_EXPECTS(!stopped());
-        
+
         auto service = std::make_shared<Service>(std::forward<Args>(args)...);
         Service& ref = *service;  // Get reference BEFORE move
         add_service(service);     // Pass by copy to avoid move
@@ -283,31 +280,30 @@ public:
      * });
      * @endcode
      */
-    template<typename Service, typename Factory>
-        requires std::invocable<Factory> && 
-                 std::same_as<std::invoke_result_t<Factory>, std::shared_ptr<Service>>
+    template <typename Service, typename Factory>
+        requires std::invocable<Factory> && std::same_as<std::invoke_result_t<Factory>, std::shared_ptr<Service>>
     Service& use_or_make_service(Factory&& factory) {
         SVAROG_EXPECTS(!stopped());
-        
+
         std::lock_guard lock(m_service_registry_mutex);
-        
+
         auto type_idx = std::type_index(typeid(Service));
         auto it = m_service_registry.find(type_idx);
-        
+
         if (it != m_service_registry.end()) {
             // Service already exists - return reference to existing
             return *std::static_pointer_cast<Service>(it->second);
         }
-        
+
         // Create new service - unlock not needed as factory should be fast
         auto service = std::forward<Factory>(factory)();
         SVAROG_EXPECTS(service != nullptr);
-        
+
         Service& ref = *service;  // Get reference BEFORE any moves
-        
+
         // Register in map
         m_service_registry.emplace(type_idx, service);
-        
+
         // Create cleanup callback - copy shared_ptr to extend lifetime
         m_cleanup_callbacks.push_back([service]() mutable {
             if constexpr (HasShutdownHook<Service>) {
@@ -316,7 +312,7 @@ public:
                 }
             }
         });
-        
+
         return ref;
     }
 
@@ -342,21 +338,20 @@ public:
      * @code
      * // First call creates the service
      * auto& service1 = ctx.use_or_make_service<MyService>(8080, "server");
-     * 
+     *
      * // Subsequent calls return existing service (args are ignored)
      * auto& service2 = ctx.use_or_make_service<MyService>(9999, "ignored");
      * // service1 and service2 are the same instance
      * @endcode
      */
-    template<typename Service, typename... Args>
+    template <typename Service, typename... Args>
     Service& use_or_make_service(Args&&... args) {
         // Capture args by value (decay) to avoid dangling references
         // Use tuple to store forwarded arguments safely
         return use_or_make_service<Service>(
             [... args = std::forward<Args>(args)]() mutable -> std::shared_ptr<Service> {
                 return std::make_shared<Service>(std::forward<decltype(args)>(args)...);
-            }
-        );
+            });
     }
 
 private:
@@ -366,10 +361,10 @@ private:
     /// Service registry: maps type_index to type-erased service instances
     /// Services are stored as shared_ptr<void> to allow any type to be registered
     std::unordered_map<std::type_index, std::shared_ptr<void>> m_service_registry;
-    
+
     /// Cleanup callbacks executed in reverse order during destruction
     /// Each callback handles on_shutdown() call (if present) and service destruction
     std::vector<std::move_only_function<void()>> m_cleanup_callbacks;
 };
 
-} // namespace svarog::execution
+}  // namespace svarog::execution

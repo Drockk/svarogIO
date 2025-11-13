@@ -5,6 +5,7 @@ add_subdirectory("core")
 # Contracts Unit Tests
 add_executable(svarog_tests
     execution/execution_context_tests.cpp
+    execution/work_queue_basic_tests.cpp
 )
 
 target_link_libraries(svarog_tests

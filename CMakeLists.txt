@@ -8,6 +8,7 @@ CPMAddPackage("gh:microsoft/GSL@4.2.0")
 CPMAddPackage("gh:catchorg/Catch2@3.11.0")
 
 set(CMAKE_CXX_STANDARD 23)
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 # Contract programming option
 option(SVAROG_ENABLE_CONTRACTS_IN_RELEASE "Enable contract checks in Release builds" OFF)

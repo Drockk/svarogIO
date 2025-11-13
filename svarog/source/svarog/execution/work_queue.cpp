@@ -64,7 +64,6 @@ work_queue::~work_queue() = default;
 
 bool work_queue::push(work_item&& t_item) {
     SVAROG_EXPECTS(t_item != nullptr);
-    SVAROG_EXPECTS(!stopped());
     return m_impl->push(std::move(t_item));
 }
 

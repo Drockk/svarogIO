@@ -81,3 +81,38 @@ add_subdirectory("examples")
 add_subdirectory("svarog")
 add_subdirectory("tests")
 
+# Code formatting targets
+find_program(CLANG_FORMAT clang-format)
+
+if(CLANG_FORMAT)
+    # Add format-check target
+    add_custom_target(format-check
+        COMMAND bash ${CMAKE_SOURCE_DIR}/scripts/check-format.sh
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+        COMMENT "Checking C++ code formatting..."
+        VERBATIM
+    )
+
+    # Add format-fix target
+    add_custom_target(format-fix
+        COMMAND bash ${CMAKE_SOURCE_DIR}/scripts/check-format.sh --fix
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+        COMMENT "Fixing C++ code formatting..."
+        VERBATIM
+    )
+
+    # Add format-check-changed target (only git changed files)
+    add_custom_target(format-check-changed
+        COMMAND bash ${CMAKE_SOURCE_DIR}/scripts/check-format.sh --changed
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+        COMMENT "Checking formatting of changed C++ files..."
+        VERBATIM
+    )
+
+    message(STATUS "Code formatting targets available:")
+    message(STATUS "  - format-check: Check all files")
+    message(STATUS "  - format-fix: Fix all files")
+    message(STATUS "  - format-check-changed: Check only git changed files")
+else()
+    message(WARNING "clang-format not found. Code formatting targets will not be available.")
+endif()

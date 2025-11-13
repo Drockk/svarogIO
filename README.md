@@ -113,9 +113,12 @@ See [docs/adr/](docs/adr/) for architectural decisions and rationale.
 
 ## Documentation
 
+- [Code Formatting Guide](docs/FORMATTING.md) - Automated formatting with git hooks and CMake
+- [Code Style](docs/CODE_STYLE.md) - Comprehensive style guidelines
 - [Phase 1 Tasks](docs/PHASE_1_TASKS.md) - Current implementation progress
 - [Coding Standards](docs/CODING_STANDARDS.md) - Code style and contract guidelines
 - [Refactoring Plan](docs/REFACTORING_PLAN.md) - Overall project roadmap
+- [Architecture Decision Records](docs/adr/) - Design decisions and rationale
 
 ## License
 

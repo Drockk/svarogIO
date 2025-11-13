@@ -26,4 +26,5 @@ target_sources(
 target_link_libraries("svarog"
   PUBLIC
   Microsoft.GSL::GSL
+  tl::expected
 )

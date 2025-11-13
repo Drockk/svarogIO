@@ -7,7 +7,22 @@
 
 #include "svarog/core/contracts.hpp"
 
-#include <expected>  // std::expected, std::unexpect
+// Use std::expected if available (C++23), otherwise use tl::expected (backport)
+#if __cpp_lib_expected >= 202202L
+    #include <expected>  // std::expected, std::unexpected
+namespace svarog::execution {
+template <typename T, typename E>
+using expected = std::expected<T, E>;
+using std::unexpected;
+}  // namespace svarog::execution
+#else
+    #include <tl/expected.hpp>  // tl::expected (backport for pre-C++23)
+namespace svarog::execution {
+template <typename T, typename E>
+using expected = tl::expected<T, E>;
+using tl::unexpected;
+}  // namespace svarog::execution
+#endif
 
 class work_queue_impl;
 
@@ -123,7 +138,7 @@ public:
     /// @note Thread-safe, can be called from multiple threads
     /// @note Returns queue_error::empty if queue is empty
     /// @note Returns queue_error::stopped if queue is stopped
-    [[nodiscard]] std::expected<work_item, queue_error> try_pop() noexcept;
+    [[nodiscard]] expected<work_item, queue_error> try_pop() noexcept;
 
     /// Get current queue size
     ///

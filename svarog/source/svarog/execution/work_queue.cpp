@@ -16,15 +16,15 @@ public:
         return true;
     }
 
-    std::expected<svarog::execution::work_item, svarog::execution::queue_error> try_pop() noexcept {
+    svarog::execution::expected<svarog::execution::work_item, svarog::execution::queue_error> try_pop() noexcept {
         std::lock_guard lock(m_mutex);
 
         if (m_stopped.load()) {
-            return std::unexpected(svarog::execution::queue_error::stopped);
+            return svarog::execution::unexpected(svarog::execution::queue_error::stopped);
         }
 
         if (m_queue.empty()) {
-            return std::unexpected(svarog::execution::queue_error::empty);
+            return svarog::execution::unexpected(svarog::execution::queue_error::empty);
         }
 
         auto item = std::move(m_queue.front());
@@ -67,7 +67,7 @@ bool work_queue::push(work_item&& t_item) {
     return m_impl->push(std::move(t_item));
 }
 
-std::expected<work_item, queue_error> work_queue::try_pop() noexcept {
+expected<work_item, queue_error> work_queue::try_pop() noexcept {
     return m_impl->try_pop();
 }
 

@@ -6,6 +6,13 @@ project("svarogIO")
 
 CPMAddPackage("gh:microsoft/GSL@4.2.0")
 CPMAddPackage("gh:catchorg/Catch2@3.11.0")
+CPMAddPackage(
+  NAME expected
+  GITHUB_REPOSITORY TartanLlama/expected
+  VERSION 1.1.0
+  OPTIONS
+    "EXPECTED_BUILD_TESTS OFF"
+)
 
 # Contract programming option
 option(SVAROG_ENABLE_CONTRACTS_IN_RELEASE "Enable contract checks in Release builds" OFF)
@@ -32,7 +39,7 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
         -Wdouble-promotion
         -Wformat=2
     )
-    
+
     # GCC-specific warnings
     if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
         add_compile_options(
@@ -44,7 +51,7 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
             -Wuseless-cast
             -Wimplicit-fallthrough
         )
-        
+
         # GCC 13+ specific warnings
         if(CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 13.0)
             add_compile_options(
@@ -52,7 +59,7 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
                 -Warith-conversion
             )
         endif()
-        
+
         # Additional GCC warnings
         add_compile_options(
             -Wextra-semi
@@ -65,7 +72,7 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
             -Wdisabled-optimization
         )
     endif()
-    
+
     # Clang-specific warnings
     if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
         add_compile_options(

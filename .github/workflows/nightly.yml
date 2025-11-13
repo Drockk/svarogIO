@@ -7,27 +7,60 @@ on:
     # Using 22:00 UTC to be safe for winter time
     - cron: '0 22 * * *'
   workflow_dispatch: # Allow manual trigger
+  push:
+    branches:
+      - main  # Run on any push to main branch
 
 jobs:
+  check-changes:
+    runs-on: ubuntu-latest
+    outputs:
+      should_run: ${{ steps.check.outputs.should_run }}
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 2  # Need at least 2 commits to compare
+    
+    - name: Check for changes in last 24 hours
+      id: check
+      run: |
+        # For manual dispatch or push events, always run
+        if [ "${{ github.event_name }}" != "schedule" ]; then
+          echo "should_run=true" >> "$GITHUB_OUTPUT"
+          echo "Running due to manual trigger or push event"
+          exit 0
+        fi
+        
+        # For scheduled runs, check if there were commits to main in last 24 hours
+        LAST_COMMIT_TIME=$(git log -1 --format=%ct origin/main)
+        CURRENT_TIME=$(date +%s)
+        TIME_DIFF=$((CURRENT_TIME - LAST_COMMIT_TIME))
+        HOURS_DIFF=$((TIME_DIFF / 3600))
+        
+        echo "Last commit was $HOURS_DIFF hours ago"
+        
+        if [ $HOURS_DIFF -le 24 ]; then
+          echo "should_run=true" >> "$GITHUB_OUTPUT"
+          echo "Found changes in last 24 hours, running nightly build"
+        else
+          echo "should_run=false" >> "$GITHUB_OUTPUT"
+          echo "No changes in last 24 hours, skipping nightly build"
+        fi
+
   nightly-full-build:
-    runs-on: ${{ matrix.os }}
+    runs-on: ubuntu-latest
+    needs: check-changes
+    if: needs.check-changes.outputs.should_run == 'true'
     
     strategy:
       fail-fast: false
-      
       matrix:
-        os: [ubuntu-latest]
-        build_type: [Release, Debug, RelWithDebInfo]
-        c_compiler: [gcc, clang]
-        include:
-          - os: ubuntu-latest
-            c_compiler: gcc
-            cpp_compiler: g++
-            cxx_standard: 23
-          - os: ubuntu-latest
-            c_compiler: clang
-            cpp_compiler: clang++
-            cxx_standard: 23
+        preset: 
+          - ci-gcc-debug
+          - ci-gcc-release
+          - ci-clang-debug
+          - ci-clang-release
+          - ci-relwithdebinfo
     
     steps:
     - uses: actions/checkout@v4
@@ -41,28 +74,16 @@ jobs:
       id: strings
       shell: bash
       run: |
-        echo "build-output-dir=${{ github.workspace }}/build" >> "$GITHUB_OUTPUT"
         echo "timestamp=$(date +'%Y-%m-%d_%H-%M-%S')" >> "$GITHUB_OUTPUT"
     
     - name: Configure CMake
-      run: >
-        cmake -B ${{ steps.strings.outputs.build-output-dir }}
-        -G Ninja
-        -DCMAKE_CXX_COMPILER=${{ matrix.cpp_compiler }}
-        -DCMAKE_C_COMPILER=${{ matrix.c_compiler }}
-        -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
-        -DCMAKE_CXX_STANDARD=${{ matrix.cxx_standard }}
-        -DSVAROG_BUILD_TESTS=ON
-        -DSVAROG_BUILD_BENCHMARKS=ON
-        -DSVAROG_BUILD_EXAMPLES=ON
-        -S ${{ github.workspace }}
+      run: cmake --preset ${{ matrix.preset }}
     
     - name: Build All Targets
-      run: cmake --build ${{ steps.strings.outputs.build-output-dir }} --config ${{ matrix.build_type }}
+      run: cmake --build --preset ${{ matrix.preset }}
     
     - name: Run Unit Tests
-      working-directory: ${{ steps.strings.outputs.build-output-dir }}
-      run: ctest --build-config ${{ matrix.build_type }} --output-on-failure --verbose
+      run: ctest --preset ${{ matrix.preset }} --verbose
     
     # - name: Run Benchmarks (Release only)
     #   if: matrix.build_type == 'Release'
@@ -82,18 +103,19 @@ jobs:
       if: failure()
       uses: actions/upload-artifact@v4
       with:
-        name: test-results-${{ matrix.c_compiler }}-${{ matrix.build_type }}-${{ steps.strings.outputs.timestamp }}
-        path: ${{ steps.strings.outputs.build-output-dir }}/Testing/Temporary/
+        name: test-results-${{ matrix.preset }}-${{ steps.strings.outputs.timestamp }}
+        path: build/Testing/Temporary/
         retention-days: 7
   
   sanitizers:
     runs-on: ubuntu-latest
+    needs: check-changes
+    if: needs.check-changes.outputs.should_run == 'true'
     
     strategy:
       fail-fast: false
-      
       matrix:
-        sanitizer: [thread, address, undefined]
+        preset: [sanitizer-thread, sanitizer-address, sanitizer-undefined]
     
     steps:
     - uses: actions/checkout@v4
@@ -104,32 +126,23 @@ jobs:
         sudo apt-get install -y ninja-build
     
     - name: Configure with Sanitizer
-      run: >
-        cmake -B build
-        -G Ninja
-        -DCMAKE_CXX_COMPILER=clang++
-        -DCMAKE_C_COMPILER=clang
-        -DCMAKE_BUILD_TYPE=Debug
-        -DCMAKE_CXX_FLAGS="-fsanitize=${{ matrix.sanitizer }} -g"
-        -DSVAROG_BUILD_TESTS=ON
-        -S ${{ github.workspace }}
+      run: cmake --preset ${{ matrix.preset }}
     
     - name: Build
-      run: cmake --build build
+      run: cmake --build --preset ${{ matrix.preset }}
     
-    - name: Run Tests with ${{ matrix.sanitizer }} sanitizer
-      working-directory: build
+    - name: Run Tests with sanitizer
       env:
         ASAN_OPTIONS: detect_leaks=1:strict_string_checks=1:detect_stack_use_after_return=1:check_initialization_order=1:strict_init_order=1
         TSAN_OPTIONS: second_deadlock_stack=1
         UBSAN_OPTIONS: print_stacktrace=1
-      run: ctest --output-on-failure --verbose
+      run: ctest --preset ${{ matrix.preset }} --verbose
     
     - name: Upload Sanitizer Results
       if: failure()
       uses: actions/upload-artifact@v4
       with:
-        name: sanitizer-${{ matrix.sanitizer }}-results
+        name: sanitizer-${{ matrix.preset }}-results
         path: build/Testing/Temporary/
         retention-days: 7
   

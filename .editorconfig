@@ -1,15 +1,75 @@
+# EditorConfig is awesome: https://EditorConfig.org
+# Based on C++ Best Practices: https://github.com/cpp-best-practices/cppbestpractices
+# top-most EditorConfig file
+root = true
+
+# Default settings for all files
 [*]
 charset = utf-8
 end_of_line = lf
 insert_final_newline = true
+trim_trailing_whitespace = true
 
-[*.{c++,cc,cpp,cxx,h,h++,hh,hpp,hxx,inl,ipp,tlh,tli}]
+# C++ source and header files (.hpp and .cpp per best practices)
+[*.{cpp,hpp,h,cc,cxx,hxx,inl,ipp}]
 indent_style = space
 indent_size = 4
+max_line_length = 120
+tab_width = 4
 
-cpp_indent_case_contents_when_block = true
+# C++ specific formatting (enforced by clang-format)
+cpp_indent_case_contents_when_block = false
 cpp_new_line_before_open_brace_namespace = same_line
+cpp_new_line_before_open_brace_type = same_line
+cpp_new_line_before_open_brace_function = same_line
+cpp_new_line_before_open_brace_block = same_line
+cpp_new_line_before_catch = false
+cpp_new_line_before_else = false
+cpp_space_before_function_open_parenthesis = never
+cpp_space_within_parameter_list_parentheses = false
+cpp_space_before_inheritance_colon = true
+cpp_space_around_binary_operator = insert
+cpp_space_after_cast_close_paren = false
+cpp_indent_access_specifiers = false
+cpp_indent_namespace_contents = true
 
-[CMakeLists.txt]
+# CMake files
+[{CMakeLists.txt,*.cmake}]
+indent_style = space
+indent_size = 4
+max_line_length = 120
+
+# JSON files (CMakePresets, package.json, etc.)
+[*.json]
 indent_style = space
 indent_size = 2
+
+# YAML files (GitHub Actions, etc.)
+[*.{yml,yaml}]
+indent_style = space
+indent_size = 2
+
+# Markdown documentation
+[*.md]
+indent_style = space
+indent_size = 2
+trim_trailing_whitespace = false
+max_line_length = off
+
+# Shell scripts
+[*.sh]
+indent_style = space
+indent_size = 2
+end_of_line = lf
+
+# Python scripts
+[*.py]
+indent_style = space
+indent_size = 4
+max_line_length = 120
+
+# Makefiles (require tabs)
+[{Makefile,*.mk}]
+indent_style = tab
+indent_size = 4
+

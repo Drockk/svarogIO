@@ -1,16 +1,15 @@
 #pragma once
 
-#include <netinet/in.h>
 #include <string>
 #include <utility>
 
-namespace svarog::ip
-{
-class ip_address
-{
+#include <netinet/in.h>
+
+namespace svarog::ip {
+class ip_address {
 public:
     virtual ~ip_address() = default;
-    
+
     ip_address() = default;
     ip_address(const ip_address&) = default;
     ip_address(ip_address&&) = default;
@@ -31,4 +30,4 @@ public:
 // constexpr ip_address make_ip_address(const std::string& address);
 // constexpr ip_address make_ip_address(std::string_view address);
 
-} // namespace svarog::ip
+}  // namespace svarog::ip

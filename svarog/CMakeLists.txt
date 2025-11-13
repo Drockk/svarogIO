@@ -4,6 +4,7 @@ target_sources(
   "svarog"
   PRIVATE
     "source/svarog/execution/execution_context.cpp"
+    "source/svarog/execution/work_queue.cpp"
     "source/svarog/ip/ip_address.cpp"
     "source/svarog/ip/ip_address_v4.cpp"
     "source/svarog/network/socket.cpp"
@@ -15,6 +16,7 @@ target_sources(
     FILES
       "include/svarog/core/contracts.hpp"
       "include/svarog/execution/execution_context.hpp"
+      "include/svarog/execution/work_queue.hpp"
       "include/svarog/ip/ip_address.hpp"
       "include/svarog/ip/ip_address_v4.hpp"
       "include/svarog/network/socket.hpp"
@@ -24,4 +26,5 @@ target_sources(
 target_link_libraries("svarog"
   PUBLIC
   Microsoft.GSL::GSL
+  tl::expected
 )

@@ -1,6 +1,7 @@
 // Test file for contract macros
-#include <svarog/core/contracts.hpp>
 #include <iostream>
+
+#include <svarog/core/contracts.hpp>
 
 using namespace svarog::core;
 
@@ -27,20 +28,20 @@ void test_expects_fail() {
 
 int main() {
     std::cout << "Testing SVAROG contract macros...\n";
-    
-    #ifdef NDEBUG
+
+#ifdef NDEBUG
     std::cout << "Running in RELEASE mode (contracts disabled)\n";
-    #else
+#else
     std::cout << "Running in DEBUG mode (contracts enabled)\n";
-    #endif
-    
+#endif
+
     test_expects_pass();
     test_ensures_pass();
-    
+
     std::cout << "\n✓ All contract tests passed!\n";
-    
+
     // Uncomment to test failure:
     // test_expects_fail();
-    
+
     return 0;
 }

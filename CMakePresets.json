@@ -29,6 +29,114 @@
         "CMAKE_CXX_STANDARD": "23",
         "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
       }
+    },
+    {
+      "name": "ci-base",
+      "hidden": true,
+      "generator": "Ninja",
+      "cacheVariables": {
+        "CMAKE_CXX_STANDARD": "23",
+        "CMAKE_CXX_STANDARD_REQUIRED": "ON",
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
+      }
+    },
+    {
+      "name": "ci-gcc-debug",
+      "inherits": "ci-base",
+      "displayName": "CI GCC Debug",
+      "description": "Debug build with GCC for CI",
+      "binaryDir": "${sourceDir}/build",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_C_COMPILER": "gcc",
+        "CMAKE_CXX_COMPILER": "g++"
+      }
+    },
+    {
+      "name": "ci-gcc-release",
+      "inherits": "ci-base",
+      "displayName": "CI GCC Release",
+      "description": "Release build with GCC for CI",
+      "binaryDir": "${sourceDir}/build",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "CMAKE_C_COMPILER": "gcc",
+        "CMAKE_CXX_COMPILER": "g++"
+      }
+    },
+    {
+      "name": "ci-clang-debug",
+      "inherits": "ci-base",
+      "displayName": "CI Clang Debug",
+      "description": "Debug build with Clang for CI",
+      "binaryDir": "${sourceDir}/build",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_C_COMPILER": "clang",
+        "CMAKE_CXX_COMPILER": "clang++"
+      }
+    },
+    {
+      "name": "ci-clang-release",
+      "inherits": "ci-base",
+      "displayName": "CI Clang Release",
+      "description": "Release build with Clang for CI",
+      "binaryDir": "${sourceDir}/build",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "CMAKE_C_COMPILER": "clang",
+        "CMAKE_CXX_COMPILER": "clang++"
+      }
+    },
+    {
+      "name": "ci-relwithdebinfo",
+      "inherits": "ci-base",
+      "displayName": "CI RelWithDebInfo",
+      "description": "RelWithDebInfo build for CI",
+      "binaryDir": "${sourceDir}/build",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "RelWithDebInfo",
+        "CMAKE_C_COMPILER": "gcc",
+        "CMAKE_CXX_COMPILER": "g++"
+      }
+    },
+    {
+      "name": "sanitizer-base",
+      "hidden": true,
+      "inherits": "ci-base",
+      "binaryDir": "${sourceDir}/build",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_C_COMPILER": "clang",
+        "CMAKE_CXX_COMPILER": "clang++"
+      }
+    },
+    {
+      "name": "sanitizer-thread",
+      "inherits": "sanitizer-base",
+      "displayName": "Thread Sanitizer",
+      "description": "Debug build with ThreadSanitizer",
+      "cacheVariables": {
+        "CMAKE_CXX_FLAGS": "-fsanitize=thread -g"
+      }
+    },
+    {
+      "name": "sanitizer-address",
+      "inherits": "sanitizer-base",
+      "displayName": "Address Sanitizer",
+      "description": "Debug build with AddressSanitizer",
+      "cacheVariables": {
+        "CMAKE_CXX_FLAGS": "-fsanitize=address -g"
+      }
+    },
+    {
+      "name": "sanitizer-undefined",
+      "inherits": "sanitizer-base",
+      "displayName": "Undefined Behavior Sanitizer",
+      "description": "Debug build with UBSanitizer",
+      "cacheVariables": {
+        "CMAKE_CXX_FLAGS": "-fsanitize=undefined -g"
+      }
     }
   ],
   "buildPresets": [
@@ -39,6 +147,38 @@
     {
       "name": "release",
       "configurePreset": "release"
+    },
+    {
+      "name": "ci-gcc-debug",
+      "configurePreset": "ci-gcc-debug"
+    },
+    {
+      "name": "ci-gcc-release",
+      "configurePreset": "ci-gcc-release"
+    },
+    {
+      "name": "ci-clang-debug",
+      "configurePreset": "ci-clang-debug"
+    },
+    {
+      "name": "ci-clang-release",
+      "configurePreset": "ci-clang-release"
+    },
+    {
+      "name": "ci-relwithdebinfo",
+      "configurePreset": "ci-relwithdebinfo"
+    },
+    {
+      "name": "sanitizer-thread",
+      "configurePreset": "sanitizer-thread"
+    },
+    {
+      "name": "sanitizer-address",
+      "configurePreset": "sanitizer-address"
+    },
+    {
+      "name": "sanitizer-undefined",
+      "configurePreset": "sanitizer-undefined"
     }
   ],
   "testPresets": [
@@ -53,6 +193,46 @@
       "configurePreset": "release",
       "output": {"outputOnFailure": true},
       "execution": {"noTestsAction": "error", "stopOnFailure": true}
+    },
+    {
+      "name": "ci-gcc-debug",
+      "configurePreset": "ci-gcc-debug",
+      "output": {"outputOnFailure": true}
+    },
+    {
+      "name": "ci-gcc-release",
+      "configurePreset": "ci-gcc-release",
+      "output": {"outputOnFailure": true}
+    },
+    {
+      "name": "ci-clang-debug",
+      "configurePreset": "ci-clang-debug",
+      "output": {"outputOnFailure": true}
+    },
+    {
+      "name": "ci-clang-release",
+      "configurePreset": "ci-clang-release",
+      "output": {"outputOnFailure": true}
+    },
+    {
+      "name": "ci-relwithdebinfo",
+      "configurePreset": "ci-relwithdebinfo",
+      "output": {"outputOnFailure": true}
+    },
+    {
+      "name": "sanitizer-thread",
+      "configurePreset": "sanitizer-thread",
+      "output": {"outputOnFailure": true}
+    },
+    {
+      "name": "sanitizer-address",
+      "configurePreset": "sanitizer-address",
+      "output": {"outputOnFailure": true}
+    },
+    {
+      "name": "sanitizer-undefined",
+      "configurePreset": "sanitizer-undefined",
+      "output": {"outputOnFailure": true}
     }
   ],
   "workflowPresets": [

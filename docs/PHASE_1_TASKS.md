@@ -425,6 +425,16 @@ private:
 
 ## 2. work_queue Implementation
 
+**Phase 1 Scope**: Simple, fixed implementation with `std::deque<work_item>` and mutex protection.
+
+**NOT in Phase 1** (see REFACTORING_PLAN.md Phase 2):
+- ❌ Template parameters for swappable containers (`WorkQueueContainer` concept)
+- ❌ `deducing this` for method overloads
+- ❌ `if consteval` compile-time checks
+- ❌ Container policy customization
+
+**Rationale**: ADR-002 recommends starting with simple mutex-protected implementation. Advanced C++23 features and container flexibility will be evaluated in Phase 2 based on real-world performance data.
+
 **Note**: `work_queue` is a thread-safe MPMC queue for storing work items. It does NOT include a thread pool - that's part of `io_context` (Section 3). See ADR-002 for implementation strategy.
 
 ### 2.1 Queue Design and Implementation

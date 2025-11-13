@@ -73,6 +73,8 @@ catch_discover_tests(svarog_tests)
 
 ## 1️⃣ work_queue - Task Queue
 
+**Implementation Note:** Phase 1 uses simplified `work_queue` with `std::move_only_function<void()>` and `std::expected`. Template parameters and swappable containers are planned for Phase 2.
+
 ### 1.1 Basic Functionality
 
 #### Test 1.1.1: Construction and Destruction
@@ -80,16 +82,16 @@ catch_discover_tests(svarog_tests)
 ```cpp
 TEST_CASE("work_queue: construction and destruction", "[work_queue][basic]") {
     SECTION("default construction") {
-        svarog::execution::work_queue<int> queue;
+        svarog::execution::work_queue queue;
         REQUIRE(queue.empty());
         REQUIRE(queue.size() == 0);
     }
     
     SECTION("destruction with pending items") {
         {
-            svarog::execution::work_queue<int> queue;
-            queue.push(42);
-            queue.push(43);
+            svarog::execution::work_queue queue;
+            queue.push([] { /* some work */ });
+            queue.push([] { /* more work */ });
         } // Destructor should cleanup
         REQUIRE(true);
     }

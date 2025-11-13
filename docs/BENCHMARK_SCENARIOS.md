@@ -745,6 +745,8 @@ TEST_CASE("strand: dispatch vs post", "[strand][bench][comparison]") {
 
 ## 4️⃣ Container Comparison Benchmarks
 
+**Note:** These benchmarks compare underlying container performance. Phase 1 uses fixed `std::deque<work_item>`. Template-based swappable containers (Phase 2) will enable runtime comparisons.
+
 ### 4.1 std::deque vs lockfree_ring_buffer
 
 **Goal:** Direct performance comparison of underlying containers.

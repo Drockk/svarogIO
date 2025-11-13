@@ -11,6 +11,30 @@ Transformation of the current C++20 coroutine-based task system into a full-fled
 - ✅ Prepare for integration with UDP/TCP sockets
 - ✅ Leverage new C++23 features
 
+## 🎯 Phased Approach
+
+### Phase 1: Foundation (CURRENT - In Progress)
+**Status:** Implementation in progress (see PHASE_1_TASKS.md)
+- ✅ Simple `work_queue` with fixed `std::deque<work_item>` and mutex
+- ✅ Basic `std::expected` error handling (with tl::expected backport)
+- ✅ `execution_context` with service registry
+- ⏳ `io_context` with thread pool
+- ⏳ `strand` for handler serialization
+
+**C++23 Features Used:**
+- `std::move_only_function` (work items)
+- `std::expected` (error handling, backported via tl::expected for Clang)
+- `std::jthread` (thread pool management)
+
+### Phase 2: Advanced Features (FUTURE)
+**Status:** Design documented, not implemented
+- Template-based `work_queue` with swappable containers
+- `deducing this` for method overloads
+- `if consteval` for compile-time optimizations
+- Container policy customization via concepts
+
+**Rationale:** Start simple (Phase 1), measure performance, then optimize (Phase 2) based on real-world data.
+
 ## 🆕 Utilizing C++23 Features
 
 The project uses C++23, allowing us to leverage the latest language features:
@@ -502,7 +526,9 @@ public:
 
 ---
 
-### Phase 2: Work Queue with Swappable Containers
+### Phase 2: Work Queue with Swappable Containers (FUTURE)
+
+**Status:** Not implemented in Phase 1. Current implementation uses fixed `std::deque<work_item>`.
 
 #### 2.1 work_queue - Thread-Safe Queue with Customizable Storage
 

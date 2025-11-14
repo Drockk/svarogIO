@@ -1,6 +1,8 @@
 #include "svarog/execution/work_queue.hpp"
 
+#include <condition_variable>
 #include <deque>
+#include <mutex>
 
 class work_queue_impl {
 public:
@@ -12,19 +14,31 @@ public:
         }
 
         m_queue.push_back(std::move(t_item));
+        m_cv.notify_one();
 
         return true;
     }
 
-    svarog::execution::expected<svarog::execution::work_item, svarog::execution::queue_error> try_pop() noexcept {
-        std::lock_guard lock(m_mutex);
+    svarog::execution::expected<svarog::execution::work_item, svarog::execution::queue_error> pop() noexcept {
+        std::unique_lock lock(m_mutex);
+
+        m_cv.wait(lock, [this] { return !m_queue.empty() || m_stopped.load(); });
 
         if (m_stopped.load()) {
             return svarog::execution::unexpected(svarog::execution::queue_error::stopped);
         }
 
+        auto item = std::move(m_queue.front());
+        m_queue.pop_front();
+        return item;
+    }
+
+    svarog::execution::expected<svarog::execution::work_item, svarog::execution::queue_error> try_pop() noexcept {
+        std::lock_guard lock(m_mutex);
+
         if (m_queue.empty()) {
-            return svarog::execution::unexpected(svarog::execution::queue_error::empty);
+            return svarog::execution::unexpected(m_stopped.load() ? svarog::execution::queue_error::stopped
+                                                                  : svarog::execution::queue_error::empty);
         }
 
         auto item = std::move(m_queue.front());
@@ -44,6 +58,7 @@ public:
 
     void stop() noexcept {
         m_stopped.store(true);
+        m_cv.notify_all();
     }
 
     bool stopped() const noexcept {
@@ -52,6 +67,7 @@ public:
 
 private:
     std::atomic<bool> m_stopped{false};
+    std::condition_variable m_cv;
     std::deque<svarog::execution::work_item> m_queue;
     mutable std::mutex m_mutex;
 };
@@ -65,6 +81,10 @@ work_queue::~work_queue() = default;
 bool work_queue::push(work_item&& t_item) {
     SVAROG_EXPECTS(t_item != nullptr);
     return m_impl->push(std::move(t_item));
+}
+
+expected<work_item, queue_error> work_queue::pop() noexcept {
+    return m_impl->pop();
 }
 
 expected<work_item, queue_error> work_queue::try_pop() noexcept {

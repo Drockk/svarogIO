@@ -84,6 +84,7 @@ endif()
 
 enable_testing()
 
+add_subdirectory("benchmarks")
 add_subdirectory("examples")
 add_subdirectory("svarog")
 add_subdirectory("tests")

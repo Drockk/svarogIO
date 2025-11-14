@@ -6,13 +6,13 @@
 using namespace svarog::core;
 
 void test_expects_pass() {
-    int value = 42;
+    [[maybe_unused]] int value = 42;
     SVAROG_EXPECTS(value > 0);  // Should pass
     std::cout << "✓ SVAROG_EXPECTS with valid condition passed\n";
 }
 
 void test_ensures_pass() {
-    int result = 100;
+    [[maybe_unused]] int result = 100;
     SVAROG_ENSURES(result >= 0);  // Should pass
     std::cout << "✓ SVAROG_ENSURES with valid condition passed\n";
 }

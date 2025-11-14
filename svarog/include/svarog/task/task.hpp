@@ -85,8 +85,10 @@ struct TaskPromise {
     finalize_task final_suspend() noexcept {
         return {};
     }
-    void return_void() {};
-    void unhandled_exception() {};
+    void return_void() {
+    }
+    void unhandled_exception() {
+    }
 
     scheduler_impl* scheduler = nullptr;
     task_list_o* p_task_list = nullptr;

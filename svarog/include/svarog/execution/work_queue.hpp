@@ -128,6 +128,19 @@ public:
     /// @note Always fails if queue is stopped
     [[nodiscard]] bool push(work_item&& t_item);
 
+    /// Pop work item from queue (blocking)
+    ///
+    /// @return work_item on success, queue_error on failure
+    ///
+    /// @post If returns work_item, queue size decreased by 1
+    /// @post If returns error, queue unchanged
+    ///
+    /// @note Thread-safe, can be called from multiple threads
+    /// @note Blocks if queue is empty until item available or queue stopped
+    /// @note Returns queue_error::stopped if queue is stopped while waiting
+    /// @note Uses condition_variable to avoid busy-waiting
+    [[nodiscard]] expected<work_item, queue_error> pop() noexcept;
+
     /// Try to pop work item from queue (non-blocking)
     ///
     /// @return work_item on success, queue_error on failure

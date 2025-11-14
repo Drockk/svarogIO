@@ -3,8 +3,8 @@
 ## Overview
 Phase 1 focuses on implementing the core execution infrastructure of svarogIO: `execution_context`, `work_queue`, `io_context`, and `strand`. This phase establishes the foundation for all asynchronous operations.
 
-**Duration**: 4-6 weeks  
-**Priority**: Critical Path  
+**Duration**: 4-6 weeks
+**Priority**: Critical Path
 **Dependencies**: None (starting point)
 
 ---
@@ -175,8 +175,8 @@ All tasks for section 1.1 are finished. Ready to proceed to section 1.2.
 **Estimated Time**: 4-5 days
 **Status**: ✅ COMPLETE (100% 🎉)
 
-**Note**: Service registry fully implemented with optimized lifecycle management using 
-C++23 `std::move_only_function` for efficient cleanup callbacks, including optional 
+**Note**: Service registry fully implemented with optimized lifecycle management using
+C++23 `std::move_only_function` for efficient cleanup callbacks, including optional
 factory pattern and lazy initialization.
 
 - [x] Create `svarog/source/execution/execution_context.cpp` ✅
@@ -209,7 +209,7 @@ factory pattern and lazy initialization.
   - Eliminated: `m_service_creation_order` vector
   - Eliminated: `m_shutdown_hooks` unordered_map
   - Result: Simpler code, better performance, one cleanup loop instead of two
-- ✅ **C++23 Features**: 
+- ✅ **C++23 Features**:
   - `std::move_only_function` for efficient move-only callbacks
   - `requires` clauses with concepts for factory validation
   - `std::invocable` and `std::invoke_result_t` for type-safe factories
@@ -271,11 +271,11 @@ documented invariants, and full Doxygen documentation for contract semantics.
   - [x] `make_service()` - `SVAROG_EXPECTS(!stopped())` ✅
   - [x] `use_or_make_service()` - `SVAROG_EXPECTS(!stopped())` and `SVAROG_EXPECTS(service != nullptr)` ✅
   - [x] Note: `stop()`, `restart()` are pure virtual - contracts defined in derived classes ✅
-  
+
 - [x] Add postconditions for state changes ✅
   - [x] Documented in method descriptions (e.g., `@post stopped() returns true` for `stop()`) ✅
   - [x] Note: Actual `SVAROG_ENSURES` in derived class implementations ✅
-  
+
 - [x] Document class invariants ✅
   ```cpp
   /**
@@ -296,7 +296,7 @@ documented invariants, and full Doxygen documentation for contract semantics.
    - ✅ `!stopped()` before using/creating services
    - ✅ `has_service<T>()` before accessing service
    - ✅ `service != nullptr` for all service pointers
-   
+
 2. **Postconditions** (State Guarantees):
    - ✅ `stopped() == true` after `stop()` completes
    - ✅ `stopped() == false` after `restart()` completes
@@ -338,27 +338,27 @@ functionality, lifecycle management, thread safety, and contract validation.
   - [x] Single service registration ✅
   - [x] Multiple service types ✅
   - [x] Service singleton per context ✅
-  
+
 - [x] Test service lifecycle ✅
   - [x] Services destroyed with context ✅
   - [x] Services destroyed in reverse creation order ✅
   - [x] Shutdown hooks called before destruction ✅
   - [x] Shutdown hooks executed in reverse order ✅
-  
+
 - [x] Test lazy initialization ✅
   - [x] `use_or_make_service()` creates if not exists ✅
   - [x] `use_or_make_service()` returns existing service ✅
   - [x] `use_or_make_service()` with factory function ✅
-  
+
 - [x] Test service replacement ✅
   - [x] Replacing existing service updates registry ✅
   - [x] Old service properly cleaned up ✅
-  
+
 - [x] Test thread safety ✅
   - [x] Concurrent `add_service()` calls ✅
   - [x] Concurrent `use_service()` calls ✅
   - [x] No data races (verified with test execution) ✅
-  
+
 - [x] Test state management ✅
   - [x] `stopped()` state transitions ✅
   - [x] `stop()` and `restart()` behavior ✅
@@ -460,17 +460,17 @@ private:
 - [x] Define error type and work item type
   ```cpp
   namespace svarog::execution {
-  
+
   /// Error codes for work_queue operations
   enum class queue_error {
       empty,      ///< Queue is empty
       stopped     ///< Queue is stopped
   };
-  
+
   /// Work item type - move-only callable with no return value
   /// @note Uses C++23 std::move_only_function for zero-overhead handlers
   using work_item = std::move_only_function<void()>;
-  
+
   } // namespace svarog::execution
   ```
 - [x] Forward declare `work_queue_impl` class
@@ -520,7 +520,7 @@ private:
   - [x] Trade-off analysis completed
 
 - [x] **Chosen implementation strategy**: **Option 3** - std::deque + mutex
-  - **Rationale**: 
+  - **Rationale**:
     - Simple, maintainable implementation for Phase 1
     - Dynamic capacity (no compile-time limits)
     - STL compatibility and testability
@@ -548,13 +548,13 @@ private:
 - [x] **Define `work_queue` class structure**
   ```cpp
   namespace svarog::execution {
-  
+
   /// Error codes for work_queue operations
   enum class queue_error {
       empty,      ///< Queue is empty
       stopped     ///< Queue is stopped
   };
-  
+
   /// Thread-safe MPMC work queue for asynchronous task execution
   /// @invariant Queue operations protected by mutex
   /// @invariant work_item destruction happens on consumer thread
@@ -565,21 +565,21 @@ private:
       /// Construct work queue
       /// @post Queue is empty and not stopped
       explicit work_queue();
-      
+
       /// Destructor - drains remaining items
       /// @post All work items destroyed
       ~work_queue();
-      
+
       // Non-copyable, non-movable (owns unique resources)
       work_queue(const work_queue&) = delete;
       work_queue& operator=(const work_queue&) = delete;
       work_queue(work_queue&&) = delete;
       work_queue& operator=(work_queue&&) = delete;
-      
+
   private:
       std::unique_ptr<work_queue_impl> m_impl;  // PIMPL
   };
-  
+
   } // namespace svarog::execution
   ```
 
@@ -648,7 +648,7 @@ private:
   /// @note Thread-safe, returns exact snapshot
   /// @note Result accurate at time of call but may change immediately
   [[nodiscard]] size_t size() const noexcept;
-  
+
   /// Check if queue is empty
   /// @return true if queue contains no items
   /// @note Thread-safe, returns exact snapshot
@@ -668,7 +668,7 @@ private:
   /// @note Thread-safe, atomic operation
   /// @note Idempotent - safe to call multiple times
   void stop() noexcept;
-  
+
   /// Check if queue is stopped
   /// @return true if stop() has been called
   /// @note Thread-safe, atomic load
@@ -692,7 +692,7 @@ private:
 - [x] **Add preconditions to all operations**
   - [x] `push()`: `SVAROG_EXPECTS(t_item != nullptr)`
   - [x] `push()`: `SVAROG_EXPECTS(!stopped())`
-  
+
 - [x] **Document class invariants**
   ```cpp
   /// @invariant Mutex protection: All queue operations are thread-safe
@@ -736,29 +736,29 @@ private:
   ```cpp
   TEST_CASE("work_queue basic operations") {
       work_queue queue;
-      
+
       SECTION("push and pop") {
           bool called = false;
           REQUIRE(queue.push([&]{ called = true; }));
-          
+
           auto result = queue.try_pop();
           REQUIRE(result.has_value());
           (*result)();
           REQUIRE(called);
       }
-      
+
       SECTION("empty queue") {
           REQUIRE(queue.empty());
           auto result = queue.try_pop();
           REQUIRE_FALSE(result.has_value());
           REQUIRE(result.error() == queue_error::empty);
       }
-      
+
       SECTION("stopped queue") {
           queue.stop();
           REQUIRE(queue.stopped());
           REQUIRE_FALSE(queue.push([]{}));
-          
+
           auto result = queue.try_pop();
           REQUIRE_FALSE(result.has_value());
           REQUIRE(result.error() == queue_error::stopped);
@@ -771,7 +771,7 @@ private:
   TEST_CASE("work_queue concurrent push") {
       work_queue queue;
       std::atomic<int> counter{0};
-      
+
       std::vector<std::thread> threads;
       for (int i = 0; i < 4; ++i) {
           threads.emplace_back([&]{
@@ -780,16 +780,16 @@ private:
               }
           });
       }
-      
+
       for (auto& t : threads) t.join();
-      
+
       // Drain queue
       while (auto result = queue.try_pop()) {
           if (result) {
               (*result)();
           }
       }
-      
+
       REQUIRE(counter == 400);
   }
   ```
@@ -837,7 +837,7 @@ This section was a duplicate of 2.1.5. All contract work completed in section 2.
 ## ~~2.3 Work Queue Interface~~ - NOT APPLICABLE
 **Status**: ❌ REMOVED - incorrect section
 
-This section described `post()` and `dispatch()` methods which belong to `io_context` (Section 3), not `work_queue`. 
+This section described `post()` and `dispatch()` methods which belong to `io_context` (Section 3), not `work_queue`.
 
 `work_queue` is a storage container with:
 - `push()` - add work item
@@ -872,15 +872,172 @@ Comprehensive benchmarks and stress tests deferred to integration testing phase 
 
 ---
 
-**Section 2 (work_queue) Overall Status**: ✅ **COMPLETE**
+## 2.6 Blocking Pop Operation
+**Estimated Time**: 1-2 days
+**Status**: ⏸️ NOT STARTED
 
-All work_queue implementation tasks finished:
-- Implementation: ✅ Complete
-- Contracts: ✅ Complete  
+**Rationale**: While `try_pop()` is essential for non-blocking work stealing, a blocking `pop()` is needed for:
+- Worker threads that should sleep when no work is available (avoid busy-waiting)
+- Efficient thread pool implementation in `io_context`
+- Graceful shutdown without spinning
+
+### 2.6.1 Add pop() Method Signature
+**Estimated Time**: 0.5 day
+
+- [ ] Add to `work_queue` class in `work_queue.hpp`:
+  ```cpp
+  /// Pop work item from queue (blocking)
+  ///
+  /// @return work_item on success, queue_error on failure
+  ///
+  /// @post If returns work_item, queue size decreased by 1
+  /// @post If returns error, queue unchanged
+  ///
+  /// @note Thread-safe, can be called from multiple threads
+  /// @note Blocks if queue is empty until item available or queue stopped
+  /// @note Returns queue_error::stopped if queue is stopped while waiting
+  /// @note Uses condition_variable to avoid busy-waiting
+  [[nodiscard]] expected<work_item, queue_error> pop() noexcept;
+  ```
+
+### 2.6.2 Implement Blocking Pop
+**Estimated Time**: 1 day
+
+- [ ] Add `std::condition_variable` to `work_queue_impl`:
+  ```cpp
+  class work_queue_impl {
+      std::deque<work_item> queue_;
+      mutable std::mutex mutex_;
+      std::condition_variable cv_;  // NEW: for blocking pop
+      std::atomic<bool> stopped_{false};
+  };
+  ```
+
+- [ ] Implement `pop()` in `work_queue.cpp`:
+  ```cpp
+  expected<work_item, queue_error> work_queue::pop() noexcept {
+      std::unique_lock lock(impl_->mutex_);
+
+      // Wait until: (1) item available, or (2) queue stopped
+      impl_->cv_.wait(lock, [this] {
+          return !impl_->queue_.empty() || impl_->stopped_.load();
+      });
+
+      // Check stop condition first
+      if (impl_->stopped_.load()) {
+          return unexpected(queue_error::stopped);
+      }
+
+      // Queue not empty (guaranteed by wait predicate)
+      work_item item = std::move(impl_->queue_.front());
+      impl_->queue_.pop_front();
+
+      return item;
+  }
+  ```
+
+- [ ] Update `push()` to notify waiting threads:
+  ```cpp
+  bool work_queue::push(work_item&& t_item) {
+      if (impl_->stopped_.load()) {
+          return false;
+      }
+
+      {
+          std::lock_guard lock(impl_->mutex_);
+          impl_->queue_.push_back(std::move(t_item));
+      }
+
+      impl_->cv_.notify_one();  // NEW: wake up one waiting pop()
+      return true;
+  }
+  ```
+
+- [ ] Update `stop()` to wake all waiting threads:
+  ```cpp
+  void work_queue::stop() noexcept {
+      impl_->stopped_.store(true);
+      impl_->cv_.notify_all();  // NEW: wake all waiting pop() threads
+  }
+  ```
+
+### 2.6.3 Add Tests for Blocking Pop
+**Estimated Time**: 0.5 day
+
+- [ ] Add test in `tests/execution/work_queue_basic_tests.cpp`:
+  ```cpp
+  TEST_CASE("work_queue: blocking pop waits for item", "[work_queue][blocking]") {
+      work_queue queue;
+      std::atomic<bool> thread_started{false};
+      std::atomic<bool> item_received{false};
+
+      // Consumer thread - should block
+      std::jthread consumer([&]() {
+          thread_started = true;
+          auto result = queue.pop();
+          if (result) {
+              result.value()();  // Execute
+              item_received = true;
+          }
+      });
+
+      // Wait for thread to start
+      while (!thread_started) {
+          std::this_thread::yield();
+      }
+
+      // Give time to block
+      std::this_thread::sleep_for(std::chrono::milliseconds(50));
+      REQUIRE_FALSE(item_received);
+
+      // Push item - should unblock
+      queue.push([]{});
+
+      consumer.join();
+      REQUIRE(item_received);
+  }
+
+  TEST_CASE("work_queue: blocking pop returns stopped error", "[work_queue][blocking]") {
+      work_queue queue;
+      std::atomic<bool> got_stopped_error{false};
+
+      std::jthread consumer([&]() {
+          auto result = queue.pop();
+          if (!result && result.error() == queue_error::stopped) {
+              got_stopped_error = true;
+          }
+      });
+
+      std::this_thread::sleep_for(std::chrono::milliseconds(50));
+      queue.stop();
+
+      consumer.join();
+      REQUIRE(got_stopped_error);
+  }
+  ```
+
+**Acceptance Criteria**:
+- ✅ `pop()` blocks when queue is empty
+- ✅ `pop()` returns immediately when item available
+- ✅ `pop()` unblocks when `stop()` called
+- ✅ `push()` wakes waiting `pop()` threads
+- ✅ ThreadSanitizer clean
+- ✅ No busy-waiting (verified with CPU profiling)
+
+---
+
+**Section 2 (work_queue) Overall Status**: 🔄 **IN PROGRESS**
+
+Completed work_queue tasks:
+- Implementation (basic): ✅ Complete
+- Contracts: ✅ Complete
 - Documentation: ✅ Complete
-- Tests: ✅ Complete (basic coverage)
+- Tests (basic): ✅ Complete
 
-**Next Section**: Proceed to Section 3 (io_context Implementation)
+**Remaining**:
+- ⏸️ Blocking pop operation (Section 2.6) - **REQUIRED for io_context**
+
+**Next Section**: After 2.6 complete, proceed to Section 3 (io_context Implementation)
   - [ ] Latency measurement (post to execution time)
   - [ ] Contention scaling (1, 2, 4, 8 threads)
 
@@ -896,14 +1053,14 @@ All work_queue implementation tasks finished:
 
 ## 3. io_context Implementation
 
-**Architecture Note**: 
+**Architecture Note**:
 - `io_context` is an **event loop**, not a thread pool
 - Inherits from `execution_context` (service registry)
 - Uses `work_queue` internally to store posted handlers
 - Threads are provided by user calling `run()` (can be multi-threaded)
 - Integrates with OS event notification (epoll/kqueue for I/O, timers in Phase 2)
 
-**Key difference from Boost.Asio**: 
+**Key difference from Boost.Asio**:
 - Boost.Asio's `io_context` can have implicit thread pool
 - Our `io_context` requires explicit `run()` calls (more control, clearer ownership)
 
@@ -917,13 +1074,13 @@ All work_queue implementation tasks finished:
   public:
       io_context();
       explicit io_context(int concurrency_hint);
-      
+
       void run();
       size_t run_one();
       void stop() override;
       bool stopped() const noexcept override;
       void restart() override;
-      
+
       // Executor access
       auto get_executor() noexcept;
   };
@@ -1010,7 +1167,7 @@ All work_queue implementation tasks finished:
       // Can post even when stopped - will be queued but not executed
       // Implementation...
   }
-  
+
   template<typename Handler>
   void dispatch(Handler&& handler) {
       SVAROG_EXPECTS(handler != nullptr);
@@ -1021,7 +1178,7 @@ All work_queue implementation tasks finished:
           post(std::forward<Handler>(handler));
       }
   }
-  
+
   std::size_t run() {
       SVAROG_EXPECTS(!stopped());  // Must not be stopped before run
       // Implementation...
@@ -1139,7 +1296,7 @@ All work_queue implementation tasks finished:
 - [ ] Define `thread_pool` class
   ```cpp
   namespace svarog::execution {
-  
+
   /// RAII wrapper over io_context with managed worker threads
   /// @note Uses C++20 std::jthread for automatic thread management
   class thread_pool {
@@ -1148,40 +1305,40 @@ All work_queue implementation tasks finished:
       /// @param num_threads Number of threads (default = hardware_concurrency)
       /// @pre num_threads > 0
       explicit thread_pool(size_t num_threads = std::thread::hardware_concurrency());
-      
+
       /// Destructor - stops and joins all threads
       /// @post All worker threads joined
       ~thread_pool();
-      
+
       // Non-copyable, non-movable
       thread_pool(const thread_pool&) = delete;
       thread_pool& operator=(const thread_pool&) = delete;
       thread_pool(thread_pool&&) = delete;
       thread_pool& operator=(thread_pool&&) = delete;
-      
+
       // Core API
       io_context& context() noexcept;
       auto get_executor() noexcept;
       void post(work_item&& item);
-      
+
       // Control
       void stop() noexcept;
       [[nodiscard]] bool stopped() const noexcept;
-      
+
       // Info
       [[nodiscard]] size_t thread_count() const noexcept;
-      
+
       // Utilities
       void wait();  // Wait for pending work
       auto make_strand();  // Create strand bound to pool
-      
+
   private:
       io_context ctx_;
       std::vector<std::jthread> threads_;
-      
+
       void worker_thread(std::stop_token stoken);
   };
-  
+
   } // namespace svarog::execution
   ```
 
@@ -1198,7 +1355,7 @@ All work_queue implementation tasks finished:
   ```cpp
   thread_pool::thread_pool(size_t num_threads) {
       SVAROG_EXPECTS(num_threads > 0);
-      
+
       threads_.reserve(num_threads);
       for (size_t i = 0; i < num_threads; ++i) {
           threads_.emplace_back([this](std::stop_token st) {
@@ -1275,7 +1432,7 @@ All work_queue implementation tasks finished:
       SVAROG_EXPECTS(num_threads > 0);
       // Implementation...
   }
-  
+
   void thread_pool::post(work_item&& item) {
       SVAROG_EXPECTS(item != nullptr);
       ctx_.post(std::move(item));
@@ -1309,14 +1466,14 @@ All work_queue implementation tasks finished:
   /// Example: Using thread_pool with strands
   /// @code
   /// thread_pool pool(4);  // 4 worker threads
-  /// 
+  ///
   /// auto s1 = pool.make_strand();
   /// auto s2 = pool.make_strand();
-  /// 
+  ///
   /// // s1 tasks serialized
   /// s1.post([] { /* task 1 */ });
   /// s1.post([] { /* task 2 */ });
-  /// 
+  ///
   /// // s2 tasks serialized (independent from s1)
   /// s2.post([] { /* task 3 */ });
   /// @endcode
@@ -1343,19 +1500,19 @@ All work_queue implementation tasks finished:
           REQUIRE(pool.thread_count() == 4);
           REQUIRE_FALSE(pool.stopped());
       }
-      
+
       SECTION("post and execute") {
           thread_pool pool(4);
           std::atomic<int> counter{0};
-          
+
           for (int i = 0; i < 100; ++i) {
               pool.post([&] { ++counter; });
           }
-          
+
           pool.stop();  // Wait for completion via destructor
           // Destructor joins threads
       }
-      
+
       SECTION("stop before destruction") {
           thread_pool pool(2);
           pool.stop();
@@ -1368,7 +1525,7 @@ All work_queue implementation tasks finished:
   TEST_CASE("thread_pool with strands") {
       thread_pool pool(4);
       auto s1 = pool.make_strand();
-      
+
       std::atomic<int> counter{0};
       for (int i = 0; i < 1000; ++i) {
           s1.post([&] {
@@ -1377,7 +1534,7 @@ All work_queue implementation tasks finished:
               counter.store(old + 1);
           });
       }
-      
+
       pool.stop();
       REQUIRE(counter == 1000);  // Serialization works
   }
@@ -1386,10 +1543,10 @@ All work_queue implementation tasks finished:
   ```cpp
   TEST_CASE("thread_pool exception handling") {
       thread_pool pool(2);
-      
+
       pool.post([] { throw std::runtime_error("test"); });
       pool.post([] { /* should still execute */ });
-      
+
       // Pool continues after exception
       REQUIRE_FALSE(pool.stopped());
   }
@@ -1430,20 +1587,20 @@ All work_queue implementation tasks finished:
   class strand {
   public:
       using executor_type = Executor;
-      
+
       explicit strand(executor_type ex);
-      
+
       executor_type get_executor() const noexcept;
-      
+
       template<typename F>
       void execute(F&& f) const;
-      
+
       template<typename F>
       void post(F&& f) const;
-      
+
       template<typename F>
       void dispatch(F&& f) const;
-      
+
       bool running_in_this_thread() const noexcept;
   };
   ```
@@ -1490,7 +1647,7 @@ All work_queue implementation tasks finished:
           catch (...) { /* log */ }
       }
   }
-  
+
   template<typename F>
   void strand::post(F&& f) {
       {
@@ -1524,7 +1681,7 @@ All work_queue implementation tasks finished:
       SVAROG_EXPECTS(f != nullptr);  // Handler must be valid
       // Implementation...
   }
-  
+
   template<typename F>
   void dispatch(F&& f) {
       SVAROG_EXPECTS(f != nullptr);
@@ -1549,7 +1706,7 @@ All work_queue implementation tasks finished:
   class strand {
       static constexpr std::size_t max_recursion_depth = 100;
       thread_local static std::size_t execution_depth_;
-      
+
       // Track recursion to prevent stack overflow from dispatch()
   };
   ```
@@ -1630,11 +1787,11 @@ All work_queue implementation tasks finished:
       io_context io_ctx;
       strand s1(io_ctx.get_executor());
       strand s2(io_ctx.get_executor());
-      
+
       // Post work to both strands
       // Verify serialization within each strand
       // Verify parallelism between strands
-      
+
       io_ctx.run();
   }
   ```

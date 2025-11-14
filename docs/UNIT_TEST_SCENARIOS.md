@@ -107,7 +107,7 @@ TEST_CASE("work_queue: construction and destruction", "[work_queue][basic]") {
 
 ```cpp
 TEST_CASE("work_queue: push and try_pop single-threaded", "[work_queue][basic]") {
-    svarog::execution::work_queue<int> queue;
+    svarog::execution::work_queue queue;
     
     SECTION("try_pop on empty queue returns error") {
         auto result = queue.try_pop();
@@ -116,18 +116,27 @@ TEST_CASE("work_queue: push and try_pop single-threaded", "[work_queue][basic]")
     }
     
     SECTION("push and try_pop multiple items - FIFO order") {
-        queue.push(1);
-        queue.push(2);
-        queue.push(3);
+        std::atomic<int> execution_order{0};
+        int val1 = 0, val2 = 0, val3 = 0;
+        
+        queue.push([&execution_order, &val1] { val1 = ++execution_order; });
+        queue.push([&execution_order, &val2] { val2 = ++execution_order; });
+        queue.push([&execution_order, &val3] { val3 = ++execution_order; });
         
         auto r1 = queue.try_pop();
-        REQUIRE(r1.value() == 1);
+        REQUIRE(r1.has_value());
+        r1.value()();  // Execute first lambda
+        REQUIRE(val1 == 1);
         
         auto r2 = queue.try_pop();
-        REQUIRE(r2.value() == 2);
+        REQUIRE(r2.has_value());
+        r2.value()();  // Execute second lambda
+        REQUIRE(val2 == 2);
         
         auto r3 = queue.try_pop();
-        REQUIRE(r3.value() == 3);
+        REQUIRE(r3.has_value());
+        r3.value()();  // Execute third lambda
+        REQUIRE(val3 == 3);
         
         REQUIRE(queue.empty());
     }
@@ -143,16 +152,17 @@ TEST_CASE("work_queue: push and try_pop single-threaded", "[work_queue][basic]")
 
 ```cpp
 TEST_CASE("work_queue: blocking pop", "[work_queue][blocking]") {
-    svarog::execution::work_queue<int> queue;
+    svarog::execution::work_queue queue;
     
     std::atomic<bool> started{false};
-    std::atomic<bool> completed{false};
+    std::atomic<int> result_value{0};
     
     std::jthread consumer([&]() {
         started = true;
         auto result = queue.pop();
-        REQUIRE(result.value() == 999);
-        completed = true;
+        if (result) {
+            result.value()();  // Execute the lambda
+        }
     });
     
     // Wait for consumer to start
@@ -162,13 +172,13 @@ TEST_CASE("work_queue: blocking pop", "[work_queue][blocking]") {
     
     // Short delay for consumer to block
     std::this_thread::sleep_for(std::chrono::milliseconds(10));
-    REQUIRE_FALSE(completed);
+    REQUIRE(result_value == 0);  // Not executed yet
     
     // Push item - should unblock consumer
-    queue.push(999);
+    queue.push([&result_value] { result_value = 999; });
     
     consumer.join();
-    REQUIRE(completed);
+    REQUIRE(result_value == 999);
 }
 ```
 
@@ -183,18 +193,19 @@ TEST_CASE("work_queue: blocking pop", "[work_queue][blocking]") {
 
 ```cpp
 TEST_CASE("work_queue: concurrent push from multiple threads", "[work_queue][concurrency]") {
-    svarog::execution::work_queue<int> queue;
+    svarog::execution::work_queue queue;
     constexpr int num_threads = 10;
     constexpr int items_per_thread = 1000;
     constexpr int total_items = num_threads * items_per_thread;
     
+    std::atomic<int> executed_count{0};
     std::vector<std::jthread> producers;
     producers.reserve(num_threads);
     
     for (int t = 0; t < num_threads; ++t) {
-        producers.emplace_back([&queue, t]() {
+        producers.emplace_back([&queue, &executed_count]() {
             for (int i = 0; i < items_per_thread; ++i) {
-                queue.push(t * items_per_thread + i);
+                queue.push([&executed_count] { executed_count++; });
             }
         });
     }
@@ -203,13 +214,15 @@ TEST_CASE("work_queue: concurrent push from multiple threads", "[work_queue][con
     
     REQUIRE(queue.size() == total_items);
     
-    // Verify all elements unique
-    std::set<int> received;
+    // Execute all work items
+    int popped_count = 0;
     while (auto item = queue.try_pop()) {
-        received.insert(item.value());
+        item.value()();  // Execute the lambda
+        popped_count++;
     }
     
-    REQUIRE(received.size() == total_items);
+    REQUIRE(popped_count == total_items);
+    REQUIRE(executed_count == total_items);
 }
 ```
 
@@ -222,7 +235,7 @@ TEST_CASE("work_queue: concurrent push from multiple threads", "[work_queue][con
 
 ```cpp
 TEST_CASE("work_queue: producer-consumer pattern", "[work_queue][concurrency]") {
-    svarog::execution::work_queue<int> queue;
+    svarog::execution::work_queue queue;
     constexpr int num_producers = 5;
     constexpr int num_consumers = 5;
     constexpr int items_per_producer = 1000;
@@ -230,15 +243,13 @@ TEST_CASE("work_queue: producer-consumer pattern", "[work_queue][concurrency]") 
     
     std::atomic<int> produced{0};
     std::atomic<int> consumed{0};
-    std::vector<int> consumed_items;
-    std::mutex consumed_mtx;
     
     // Producers
     std::vector<std::jthread> producers;
     for (int p = 0; p < num_producers; ++p) {
-        producers.emplace_back([&, p]() {
+        producers.emplace_back([&]() {
             for (int i = 0; i < items_per_producer; ++i) {
-                queue.push(p * items_per_producer + i);
+                queue.push([&consumed] { consumed++; });
                 produced++;
             }
         });
@@ -250,11 +261,7 @@ TEST_CASE("work_queue: producer-consumer pattern", "[work_queue][concurrency]") 
         consumers.emplace_back([&]() {
             while (consumed < total_items) {
                 if (auto item = queue.try_pop()) {
-                    {
-                        std::lock_guard lock(consumed_mtx);
-                        consumed_items.push_back(item.value());
-                    }
-                    consumed++;
+                    item.value()();  // Execute the lambda
                 } else {
                     std::this_thread::yield();
                 }
@@ -266,10 +273,6 @@ TEST_CASE("work_queue: producer-consumer pattern", "[work_queue][concurrency]") 
     consumers.clear();
     
     REQUIRE(consumed == total_items);
-    
-    // Verify uniqueness
-    std::set<int> unique_items(consumed_items.begin(), consumed_items.end());
-    REQUIRE(unique_items.size() == total_items);
 }
 ```
 
@@ -284,7 +287,7 @@ TEST_CASE("work_queue: producer-consumer pattern", "[work_queue][concurrency]") 
 
 ```cpp
 TEST_CASE("work_queue: shutdown behavior", "[work_queue][shutdown]") {
-    svarog::execution::work_queue<int> queue;
+    svarog::execution::work_queue queue;
     
     SECTION("shutdown wakes up blocking threads") {
         std::atomic<bool> got_shutdown_error{false};
@@ -305,16 +308,22 @@ TEST_CASE("work_queue: shutdown behavior", "[work_queue][shutdown]") {
     }
     
     SECTION("shutdown with pending items allows draining") {
-        queue.push(1);
-        queue.push(2);
+        std::atomic<int> val1{0}, val2{0};
+        
+        queue.push([&val1] { val1 = 1; });
+        queue.push([&val2] { val2 = 2; });
         queue.shutdown();
         
         // Existing items can still be retrieved
         auto r1 = queue.try_pop();
-        REQUIRE(r1.value() == 1);
+        REQUIRE(r1.has_value());
+        r1.value()();
+        REQUIRE(val1 == 1);
         
         auto r2 = queue.try_pop();
-        REQUIRE(r2.value() == 2);
+        REQUIRE(r2.has_value());
+        r2.value()();
+        REQUIRE(val2 == 2);
         
         // Now empty and shutdown
         auto r3 = queue.try_pop();

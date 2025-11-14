@@ -81,27 +81,28 @@ target_compile_definitions(svarog_benchmarks PRIVATE CATCH_CONFIG_ENABLE_BENCHMA
 #include <svarog/execution/work_queue.hpp>
 
 TEST_CASE("work_queue: push throughput", "[work_queue][bench][throughput]") {
-    svarog::execution::work_queue<int> queue;
+    svarog::execution::work_queue queue;
+    std::atomic<int> counter{0};
     
     BENCHMARK("push single item") {
-        queue.push(42);
+        queue.push([&counter] { counter++; });
     };
     
     BENCHMARK("push 10 items") {
         for (int i = 0; i < 10; ++i) {
-            queue.push(i);
+            queue.push([&counter] { counter++; });
         }
     };
     
     BENCHMARK("push 100 items") {
         for (int i = 0; i < 100; ++i) {
-            queue.push(i);
+            queue.push([&counter] { counter++; });
         }
     };
     
     BENCHMARK("push 1000 items") {
         for (int i = 0; i < 1000; ++i) {
-            queue.push(i);
+            queue.push([&counter] { counter++; });
         }
     };
 }
@@ -121,27 +122,36 @@ TEST_CASE("work_queue: push throughput", "[work_queue][bench][throughput]") {
 
 ```cpp
 TEST_CASE("work_queue: pop throughput", "[work_queue][bench][throughput]") {
-    svarog::execution::work_queue<int> queue;
+    svarog::execution::work_queue queue;
+    std::atomic<int> counter{0};
     
     SECTION("try_pop performance") {
         // Pre-fill queue
         for (int i = 0; i < 10000; ++i) {
-            queue.push(i);
+            queue.push([&counter] { counter++; });
         }
         
         BENCHMARK("try_pop single item") {
-            return queue.try_pop();
+            auto result = queue.try_pop();
+            if (result) {
+                result.value()();  // Execute the lambda
+            }
+            return result.has_value();
         };
     }
     
     SECTION("blocking pop performance") {
         // Pre-fill queue
         for (int i = 0; i < 10000; ++i) {
-            queue.push(i);
+            queue.push([&counter] { counter++; });
         }
         
         BENCHMARK("pop (blocking) single item") {
-            return queue.pop();
+            auto result = queue.pop();
+            if (result) {
+                result.value()();  // Execute the lambda
+            }
+            return result.has_value();
         };
     }
 }
@@ -161,7 +171,7 @@ TEST_CASE("work_queue: pop throughput", "[work_queue][bench][throughput]") {
 TEST_CASE("work_queue: producer-consumer latency", "[work_queue][bench][latency]") {
     using namespace std::chrono;
     
-    svarog::execution::work_queue<int64_t> queue;
+    svarog::execution::work_queue queue;
     std::vector<int64_t> latencies;
     latencies.reserve(10000);
     std::atomic<bool> consumer_running{true};
@@ -170,9 +180,7 @@ TEST_CASE("work_queue: producer-consumer latency", "[work_queue][bench][latency]
     std::jthread consumer([&]() {
         while (consumer_running) {
             if (auto item = queue.try_pop()) {
-                auto now = high_resolution_clock::now();
-                auto sent_time = time_point<high_resolution_clock>(nanoseconds(item.value()));
-                latencies.push_back(duration_cast<nanoseconds>(now - sent_time).count());
+                item.value()();  // Execute the lambda (which will record latency)
             } else {
                 std::this_thread::yield();
             }
@@ -180,8 +188,11 @@ TEST_CASE("work_queue: producer-consumer latency", "[work_queue][bench][latency]
     });
     
     BENCHMARK("end-to-end latency") {
-        auto now = high_resolution_clock::now();
-        queue.push(now.time_since_epoch().count());
+        auto start = high_resolution_clock::now();
+        queue.push([&latencies, start]() {
+            auto end = high_resolution_clock::now();
+            latencies.push_back(duration_cast<nanoseconds>(end - start).count());
+        });
     };
     
     consumer_running = false;
@@ -216,7 +227,7 @@ TEST_CASE("work_queue: producer-consumer latency", "[work_queue][bench][latency]
 ```cpp
 TEST_CASE("work_queue: MPMC scalability", "[work_queue][bench][scalability]") {
     SECTION("1 producer, 1 consumer") {
-        svarog::execution::work_queue<int> queue;
+        svarog::execution::work_queue queue;
         std::atomic<int> consumed{0};
         constexpr int items = 10000;
         
@@ -225,14 +236,14 @@ TEST_CASE("work_queue: MPMC scalability", "[work_queue][bench][scalability]") {
             
             std::jthread producer([&]() {
                 for (int i = 0; i < items; ++i) {
-                    queue.push(i);
+                    queue.push([&consumed] { consumed++; });
                 }
             });
             
             std::jthread consumer([&]() {
                 while (consumed < items) {
                     if (auto item = queue.try_pop()) {
-                        consumed++;
+                        item.value()();  // Execute the lambda
                     }
                 }
             });
@@ -240,7 +251,7 @@ TEST_CASE("work_queue: MPMC scalability", "[work_queue][bench][scalability]") {
     }
     
     SECTION("4 producers, 4 consumers") {
-        svarog::execution::work_queue<int> queue;
+        svarog::execution::work_queue queue;
         std::atomic<int> consumed{0};
         constexpr int items_per_producer = 2500;
         constexpr int total_items = items_per_producer * 4;
@@ -250,9 +261,9 @@ TEST_CASE("work_queue: MPMC scalability", "[work_queue][bench][scalability]") {
             
             std::vector<std::jthread> producers;
             for (int p = 0; p < 4; ++p) {
-                producers.emplace_back([&, p]() {
+                producers.emplace_back([&]() {
                     for (int i = 0; i < items_per_producer; ++i) {
-                        queue.push(p * items_per_producer + i);
+                        queue.push([&consumed] { consumed++; });
                     }
                 });
             }
@@ -262,7 +273,7 @@ TEST_CASE("work_queue: MPMC scalability", "[work_queue][bench][scalability]") {
                 consumers.emplace_back([&]() {
                     while (consumed < total_items) {
                         if (auto item = queue.try_pop()) {
-                            consumed++;
+                            item.value()();  // Execute the lambda
                         }
                     }
                 });
@@ -271,7 +282,7 @@ TEST_CASE("work_queue: MPMC scalability", "[work_queue][bench][scalability]") {
     }
     
     SECTION("8 producers, 8 consumers") {
-        svarog::execution::work_queue<int> queue;
+        svarog::execution::work_queue queue;
         std::atomic<int> consumed{0};
         constexpr int items_per_producer = 1250;
         constexpr int total_items = items_per_producer * 8;
@@ -281,9 +292,9 @@ TEST_CASE("work_queue: MPMC scalability", "[work_queue][bench][scalability]") {
             
             std::vector<std::jthread> producers;
             for (int p = 0; p < 8; ++p) {
-                producers.emplace_back([&, p]() {
+                producers.emplace_back([&]() {
                     for (int i = 0; i < items_per_producer; ++i) {
-                        queue.push(p * items_per_producer + i);
+                        queue.push([&consumed] { consumed++; });
                     }
                 });
             }
@@ -293,7 +304,7 @@ TEST_CASE("work_queue: MPMC scalability", "[work_queue][bench][scalability]") {
                 consumers.emplace_back([&]() {
                     while (consumed < total_items) {
                         if (auto item = queue.try_pop()) {
-                            consumed++;
+                            item.value()();  // Execute the lambda
                         }
                     }
                 });
@@ -323,7 +334,7 @@ TEST_CASE("work_queue: high contention", "[work_queue][bench][contention]") {
     const int num_cores = std::thread::hardware_concurrency();
     
     SECTION("at hardware_concurrency") {
-        svarog::execution::work_queue<int> queue;
+        svarog::execution::work_queue queue;
         std::atomic<int> total_ops{0};
         
         BENCHMARK("contention at HW threads") {
@@ -333,9 +344,10 @@ TEST_CASE("work_queue: high contention", "[work_queue][bench][contention]") {
             for (int t = 0; t < num_cores; ++t) {
                 threads.emplace_back([&]() {
                     for (int i = 0; i < 1000; ++i) {
-                        queue.push(i);
+                        queue.push([&total_ops] { total_ops++; });
                         total_ops++;
                         if (auto item = queue.try_pop()) {
+                            item.value()();  // Execute the lambda
                             total_ops++;
                         }
                     }
@@ -345,7 +357,7 @@ TEST_CASE("work_queue: high contention", "[work_queue][bench][contention]") {
     }
     
     SECTION("2x hardware_concurrency (oversubscribed)") {
-        svarog::execution::work_queue<int> queue;
+        svarog::execution::work_queue queue;
         std::atomic<int> total_ops{0};
         
         BENCHMARK("contention at 2x HW threads") {
@@ -355,9 +367,10 @@ TEST_CASE("work_queue: high contention", "[work_queue][bench][contention]") {
             for (int t = 0; t < num_cores * 2; ++t) {
                 threads.emplace_back([&]() {
                     for (int i = 0; i < 500; ++i) {
-                        queue.push(i);
+                        queue.push([&total_ops] { total_ops++; });
                         total_ops++;
                         if (auto item = queue.try_pop()) {
+                            item.value()();  // Execute the lambda
                             total_ops++;
                         }
                     }

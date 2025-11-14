@@ -88,12 +88,14 @@ jobs:
     - name: Run Benchmarks (Release presets only)
       if: contains(matrix.preset, 'release') || contains(matrix.preset, 'relwithdebinfo')
       run: |
-        PRESET_BUILD_DIR=$(cmake --preset ${{ matrix.preset }} -N 2>&1 | grep "Build files" | sed 's/.*in: //' || echo "build/${{ matrix.preset }}")
-        echo "Build directory: $PRESET_BUILD_DIR"
-        if [ -f "$PRESET_BUILD_DIR/benchmarks/svarog_benchmarks" ]; then
-          $PRESET_BUILD_DIR/benchmarks/svarog_benchmarks --benchmark-samples 1000 > benchmark_results_${{ matrix.preset }}.txt
+        # All CI presets use 'build' as the binary directory
+        BUILD_DIR="build"
+        echo "Build directory: $BUILD_DIR"
+        if [ -f "$BUILD_DIR/benchmarks/svarog_benchmarks" ]; then
+          $BUILD_DIR/benchmarks/svarog_benchmarks --benchmark-samples 1000 > benchmark_results_${{ matrix.preset }}.txt
         else
-          echo "Benchmark executable not found in $PRESET_BUILD_DIR/benchmarks/"
+          echo "Benchmark executable not found in $BUILD_DIR/benchmarks/"
+          ls -la "$BUILD_DIR/benchmarks/" || echo "Benchmarks directory does not exist"
           exit 1
         fi
 

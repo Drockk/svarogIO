@@ -95,19 +95,24 @@ TEST_CASE("work_queue: concurrent push from multiple threads", "[work_queue][con
     constexpr int total_items = num_threads * items_per_thread;
 
     std::atomic<int> executed_count{0};
+    std::atomic<int> failed_pushes{0};
     std::vector<std::jthread> producers;
     producers.reserve(num_threads);
 
     for (int t = 0; t < num_threads; ++t) {
-        producers.emplace_back([&queue, &executed_count]() {
+        producers.emplace_back([&queue, &executed_count, &failed_pushes]() {
             for (int i = 0; i < items_per_thread; ++i) {
-                REQUIRE(queue.push([&executed_count] { executed_count++; }));
+                if (!queue.push([&executed_count] { executed_count++; })) {
+                    failed_pushes++;
+                }
             }
         });
     }
 
     producers.clear();  // Implicit join
 
+    // Verify all pushes succeeded (no assertions in threads)
+    REQUIRE(failed_pushes == 0);
     REQUIRE(queue.size() == total_items);
 
     // Execute all work items
@@ -130,14 +135,18 @@ TEST_CASE("work_queue: producer-consumer pattern", "[work_queue][concurrency]") 
 
     std::atomic<int> produced{0};
     std::atomic<int> consumed{0};
+    std::atomic<int> failed_pushes{0};
 
     // Producers
     std::vector<std::jthread> producers;
     for (int p = 0; p < num_producers; ++p) {
         producers.emplace_back([&]() {
             for (int i = 0; i < items_per_producer; ++i) {
-                REQUIRE(queue.push([&consumed] { consumed++; }));
-                produced++;
+                if (queue.push([&consumed] { consumed++; })) {
+                    produced++;
+                } else {
+                    failed_pushes++;
+                }
             }
         });
     }
@@ -159,6 +168,8 @@ TEST_CASE("work_queue: producer-consumer pattern", "[work_queue][concurrency]") 
     producers.clear();
     consumers.clear();
 
+    // Verify all pushes succeeded and all items were consumed
+    REQUIRE(failed_pushes == 0);
     REQUIRE(consumed == total_items);
 }
 

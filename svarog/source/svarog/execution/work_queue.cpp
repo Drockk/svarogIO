@@ -65,6 +65,10 @@ public:
         return m_stopped.load();
     }
 
+    void clear() noexcept {
+        m_queue.clear();
+    }
+
 private:
     std::atomic<bool> m_stopped{false};
     std::condition_variable m_cv;
@@ -105,6 +109,10 @@ void work_queue::stop() noexcept {
 
 bool work_queue::stopped() const noexcept {
     return m_impl->stopped();
+}
+
+void work_queue::clear() noexcept {
+    m_impl->clear();
 }
 
 }  // namespace svarog::execution

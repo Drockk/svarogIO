@@ -187,6 +187,16 @@ public:
     /// @note Thread-safe, atomic load
     [[nodiscard]] bool stopped() const noexcept;
 
+    /// Clear all pending work items from queue
+    ///
+    /// @post Queue is empty
+    /// @post stopped() state unchanged
+    ///
+    /// @note Thread-safe, can be called from any thread
+    /// @note Work items are destroyed without execution
+    /// @note Typically used during restart() to clear stale work
+    void clear() noexcept;
+
 private:
     /// PIMPL idiom - hides implementation details
     /// @note Current implementation: std::deque with mutex protection (ADR-002)

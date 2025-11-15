@@ -82,9 +82,7 @@ public:
      *
      * @post stopped() returns true after this call completes.
      */
-    virtual void stop() {
-        SVAROG_EXPECTS(!stopped());
-    }
+    virtual void stop() = 0;
 
     /**
      * @brief Restart the execution context after it has been stopped.
@@ -95,9 +93,8 @@ public:
      * @pre stopped() must return true before calling restart().
      * @post stopped() returns false after restart completes.
      */
-    virtual void restart() {
-        SVAROG_ENSURES(!stopped());
-    }
+    virtual void restart() = 0;
+
     /**
      * @brief Check if the execution context has been stopped.
      *

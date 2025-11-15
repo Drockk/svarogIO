@@ -92,18 +92,22 @@
     "editor.formatOnPaste": false,
     // C++ formatting with clang-format
     "[cpp]": {
-        "editor.defaultFormatter": "ms-vscode.cpptools",
+        "editor.defaultFormatter": "xaver.clang-format",
         "editor.formatOnSave": true,
         "editor.tabSize": 4,
         "editor.insertSpaces": true
     },
     "[c]": {
-        "editor.defaultFormatter": "ms-vscode.cpptools",
+        "editor.defaultFormatter": "xaver.clang-format",
         "editor.formatOnSave": true,
         "editor.tabSize": 4,
         "editor.insertSpaces": true
     },
-    // Use clang-format style file
+    // Clang-format configuration
+    "clang-format.executable": "clang-format",
+    "clang-format.style": "file",
+    "clang-format.fallbackStyle": "LLVM",
+    // Legacy C_Cpp settings (fallback)
     "C_Cpp.clang_format_style": "file",
     "C_Cpp.clang_format_fallbackStyle": "LLVM",
     // CMake formatting

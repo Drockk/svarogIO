@@ -470,6 +470,80 @@ TEST_CASE("io_context: multiple worker threads", "[io_context][threading]") {
 
 ---
 
+### 2.3 Coroutine Integration
+
+#### Test 2.3.1: co_spawn executes coroutine to completion
+
+```cpp
+TEST_CASE("io_context: co_spawn coroutine", "[io_context][coroutine]") {
+    svarog::execution::io_context io_ctx;
+    auto exec = io_ctx.get_executor();
+
+    bool resumed_on_context = false;
+
+    auto coro = [&]() -> svarog::execution::awaitable_task<void> {
+        REQUIRE(svarog::execution::this_coro::executor() == exec);
+        co_await io_ctx.schedule();
+        resumed_on_context = svarog::execution::this_coro::running_in_io_context();
+        co_return;
+    };
+
+    svarog::execution::co_spawn(io_ctx, coro(), svarog::execution::detached);
+
+    io_ctx.run();
+
+    REQUIRE(resumed_on_context);
+}
+```
+
+**Goal:** Ensure `co_spawn` binds coroutine to io_context executor and resumes on its worker thread  
+**Expected:** `schedule()` awaiter posts/resumes via io_context and `this_coro::executor` matches
+
+---
+
+#### Test 2.3.2: Cancellation and exception propagation
+
+```cpp
+TEST_CASE("io_context: coroutine cancellation", "[io_context][coroutine][cancel]") {
+    svarog::execution::io_context io_ctx;
+
+    std::optional<std::error_code> completion_error;
+
+    auto long_running = [&]() -> svarog::execution::awaitable_task<void> {
+        for (int i = 0; i < 10; ++i) {
+            co_await io_ctx.schedule();
+            co_await svarog::execution::this_coro::check_cancellation();
+        }
+        throw std::runtime_error("boom");
+    };
+
+    svarog::execution::co_spawn(
+        io_ctx,
+        long_running(),
+        svarog::execution::use_future([
+            &completion_error
+        ](std::error_code ec) {
+            completion_error = ec;
+        })
+    );
+
+    std::jthread stopper([&]() {
+        std::this_thread::sleep_for(1ms);
+        io_ctx.stop();
+    });
+
+    io_ctx.run();
+
+    REQUIRE(completion_error.has_value());
+    REQUIRE(completion_error == svarog::execution::error::operation_aborted);
+}
+```
+
+**Goal:** Verify coroutine cancellation hooks and exception -> completion token propagation  
+**Expected:** `co_spawn` completion token receives `operation_aborted` when context stops, and exceptions don’t terminate the thread
+
+---
+
 ## 3️⃣ strand - Handler Serialization
 
 ### 3.1 Basic Functionality

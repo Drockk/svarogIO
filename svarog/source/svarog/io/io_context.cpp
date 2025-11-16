@@ -1,5 +1,7 @@
 #include "svarog/io/io_context.hpp"
 
+#include <thread>
+
 namespace svarog::io {
 
 io_context::io_context([[maybe_unused]] size_t t_concurrency_hint) {
@@ -9,22 +11,29 @@ io_context::io_context([[maybe_unused]] size_t t_concurrency_hint) {
 }
 
 void io_context::run() {
-    while (!stopped()) {
-        // Use blocking pop() to avoid busy-waiting
-        auto handler_result = m_handlers.pop();
+    // Mark this thread as running this io_context
+    current_context_ = this;
 
-        if (!handler_result) {
-            // Queue stopped or error - exit loop
-            break;
+    while (!stopped()) {
+        auto handler_result = m_handlers.try_pop();
+
+        if (!handler_result.has_value()) {
+            // Queue empty - check if we should exit or wait
+            if (m_work_count.load(std::memory_order_acquire) == 0) {
+                // No work_guard active - exit naturally
+                break;
+            }
+            // Work guard active but queue empty - yield and retry
+            std::this_thread::yield();
+            continue;
         }
 
         // Execute handler
         (*handler_result)();
-
-        // Future: Poll I/O events (epoll_wait with timeout)
-        // Future: Process I/O completion handlers
-        // Future: Check timers
     }
+
+    // Clear thread-local context on exit
+    current_context_ = nullptr;
 }
 
 size_t io_context::run_one() {
@@ -63,6 +72,10 @@ void io_context::executor_type::execute(std::move_only_function<void()> f) const
 
 io_context& io_context::executor_type::context() const noexcept {
     return *m_context;
+}
+
+bool io_context::running_in_this_thread() const noexcept {
+    return current_context_ == this;
 }
 
 }  // namespace svarog::io

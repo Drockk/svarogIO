@@ -6,6 +6,10 @@
 #include "svarog/execution/execution_context.hpp"
 #include "svarog/execution/work_queue.hpp"
 
+namespace svarog::execution {
+class executor_work_guard;
+}
+
 namespace svarog::io {
 
 /// @brief Event-driven execution context for asynchronous I/O operations.
@@ -145,9 +149,53 @@ public:
     /// @note Executor remains valid as long as io_context exists
     executor_type get_executor() noexcept;
 
+    void post(auto&& t_handler) {
+        SVAROG_EXPECTS(t_handler != nullptr);
+        [[maybe_unused]] bool pushed = m_handlers.push(std::forward<decltype(t_handler)>(t_handler));
+        // If push fails, context is stopped and work will not execute
+        // This is expected behavior for post() - fire and forget
+    }
+
+    void dispatch(auto&& t_handler) {
+        SVAROG_EXPECTS(t_handler != nullptr);
+        if (running_in_this_thread()) {
+            SVAROG_EXPECTS(!stopped());
+            t_handler();
+        } else {
+            post(std::forward<decltype(t_handler)>(t_handler));
+        }
+    }
+
+    /// @brief Check if current thread is running this io_context's event loop.
+    ///
+    /// @return true if current thread is executing run() for this io_context
+    ///
+    /// @note Used by dispatch() to optimize immediate execution
+    /// @note Thread-safe, lock-free operation
+    /// @threadsafety Can be called from any thread
+    ///
+    /// @par Example:
+    /// @code
+    /// io_context ctx;
+    ///
+    /// ctx.post([&]{
+    ///     assert(ctx.running_in_this_thread());  // true - inside run()
+    /// });
+    ///
+    /// assert(!ctx.running_in_this_thread());  // false - outside run()
+    /// @endcode
+    bool running_in_this_thread() const noexcept;
+
 private:
     std::atomic<bool> m_stopped{false};
     execution::work_queue m_handlers;
+    std::atomic<size_t> m_work_count{0};  // For work_guard
+
+    /// @brief Thread-local pointer to the io_context currently executing on this thread.
+    /// @note Used by running_in_this_thread() to detect if dispatch() can execute immediately
+    inline static thread_local io_context* current_context_ = nullptr;
+
+    friend class execution::executor_work_guard;
 };
 
 }  // namespace svarog::io

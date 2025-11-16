@@ -5,6 +5,7 @@ target_sources(
   PRIVATE
     "source/svarog/execution/execution_context.cpp"
     "source/svarog/execution/work_queue.cpp"
+    "source/svarog/execution/work_guard.cpp"
     "source/svarog/io/io_context.cpp"
     "source/svarog/ip/ip_address.cpp"
     "source/svarog/ip/ip_address_v4.cpp"
@@ -18,6 +19,7 @@ target_sources(
       "include/svarog/core/contracts.hpp"
       "include/svarog/execution/execution_context.hpp"
       "include/svarog/execution/work_queue.hpp"
+      "include/svarog/execution/work_guard.hpp"
       "include/svarog/io/io_context.hpp"
       "include/svarog/ip/ip_address.hpp"
       "include/svarog/ip/ip_address_v4.hpp"

@@ -60,7 +60,7 @@ std::expected<T, queue_error> try_pop() noexcept {
 }
 
 // In network operations
-std::expected<std::size_t, std::error_code> 
+std::expected<std::size_t, std::error_code>
 udp_socket::receive_from(buffer& buf, endpoint& sender) {
     auto bytes = ::recvfrom(/*...*/);
     if (bytes < 0) {
@@ -86,7 +86,7 @@ public:
     // Before C++23 - two overloads
     // void push(const T& item);
     // void push(T&& item);
-    
+
     // C++23 - single method with deducing this
     template<typename Self>
     void push(this Self&& self, auto&& item) {
@@ -123,7 +123,7 @@ public:
         }
         return ptr_;
     }
-    
+
 private:
     T* ptr_ = nullptr;
 };
@@ -137,10 +137,10 @@ private:
 // In io_context_impl for debug traces
 void io_context_impl::post(work_item handler) {
     #ifdef SVAROG_DEBUG_TRACE
-    std::println(stderr, "[io_context:{}] posting handler, queue_size={}", 
+    std::println(stderr, "[io_context:{}] posting handler, queue_size={}",
                  fmt::ptr(this), work_queue_.size());
     #endif
-    
+
     work_queue_.push(std::move(handler));
 }
 
@@ -148,7 +148,7 @@ void io_context_impl::post(work_item handler) {
 template<typename Handler>
 void strand::dispatch(Handler&& handler) {
     #ifdef SVAROG_TRACE_STRAND
-    std::println("[strand:{}] dispatch called from thread {}", 
+    std::println("[strand:{}] dispatch called from thread {}",
                  fmt::ptr(this), std::this_thread::get_id());
     #endif
     // ...
@@ -160,7 +160,7 @@ void strand::dispatch(Handler&& handler) {
 - ✅ Type-safe formatting (like std::format)
 - ✅ Better for multithreaded logging
 
-### 5. **Multidimensional subscript operator[]** 
+### 5. **Multidimensional subscript operator[]**
 
 **Use case:** Potentially for buffer management
 
@@ -172,7 +172,7 @@ public:
     std::span<std::byte> operator[](std::size_t chunk_idx, std::size_t offset) {
         return chunks_[chunk_idx].subspan(offset);
     }
-    
+
 private:
     std::vector<std::span<std::byte>> chunks_;
 };
@@ -195,7 +195,7 @@ io_ctx.post([socket = std::move(unique_socket)]() mutable {
 template<typename T>
 class work_queue {
     // ...
-    
+
     // Requires only MoveConstructible, not CopyConstructible
     void push(std::move_only_function<void()> handler) {
         // ...
@@ -219,7 +219,7 @@ private:
     // Instead of std::unordered_map for small collections
     // (better cache locality, fewer allocations)
     std::flat_map<timer_id, timer_operation> active_timers_;
-    
+
     // Tracking worker threads
     std::flat_set<std::thread::id> worker_thread_ids_;
 };
@@ -239,11 +239,11 @@ private:
 struct traced_handler {
     std::move_only_function<void()> handler;
     std::stacktrace trace;
-    
-    traced_handler(auto&& h) 
+
+    traced_handler(auto&& h)
         : handler(std::forward<decltype(h)>(h))
         , trace(std::stacktrace::current()) {}
-    
+
     void operator()() {
         try {
             handler();
@@ -342,7 +342,7 @@ namespace svarog::core {
 ```cpp
 void io_context::post(std::move_only_function<void()> handler) {
     SVAROG_EXPECTS(handler != nullptr);  // Programming error if violated
-    
+
     impl_->work_queue_.push(std::move(handler));
 }
 ```
@@ -352,9 +352,9 @@ void io_context::post(std::move_only_function<void()> handler) {
 ```cpp
 std::size_t io_context::run() {
     SVAROG_EXPECTS(!stopped());  // Precondition: must be running
-    
+
     auto count = run_impl();
-    
+
     SVAROG_ENSURES(stopped());   // Postcondition: stopped after run
     return count;
 }
@@ -365,7 +365,7 @@ std::size_t io_context::run() {
 ```cpp
 void strand::dispatch(Handler&& handler) {
     SVAROG_EXPECTS(handler != nullptr);
-    
+
     if (running_in_this_thread()) {
         // Critical: prevent infinite recursion
         SVAROG_EXPECTS(execution_depth_ < max_recursion_depth);
@@ -384,7 +384,7 @@ class work_queue {
     // - After shutdown(), push() fails with error
     // - size() >= 0 always
     // - All items in queue are valid (not nullptr)
-    
+
 private:
     void check_invariants() const {
         #ifndef NDEBUG
@@ -507,10 +507,10 @@ class execution_context {
 public:
     execution_context() = default;
     virtual ~execution_context() = default;
-    
+
     execution_context(const execution_context&) = delete;
     execution_context& operator=(const execution_context&) = delete;
-    
+
     // Interface for all execution contexts
     virtual void shutdown() = 0;
     virtual bool stopped() const noexcept = 0;
@@ -561,13 +561,13 @@ public:
     using value_type = T;
     using container_type = Container;
     using size_type = typename Container::size_type;
-    
+
     explicit work_queue() = default;
     ~work_queue() = default;
-    
+
     work_queue(const work_queue&) = delete;
     work_queue& operator=(const work_queue&) = delete;
-    
+
     // Thread-safe operations (C++23: deducing this + std::expected)
     template<typename Self>
     void push(this Self&& self, auto&& item) {
@@ -575,31 +575,31 @@ public:
         self.data_.items.push_back(std::forward<decltype(item)>(item));
         self.cv_.notify_one();
     }
-    
+
     std::expected<T, queue_error> try_pop() noexcept;
     std::expected<T, queue_error> pop();  // blocking
     std::expected<T, queue_error> pop_for(std::chrono::milliseconds timeout);
-    
+
     bool empty() const noexcept;
     size_type size() const noexcept;
-    
+
     // Bulk operations
     template<typename InputIt>
     void push_bulk(InputIt first, InputIt last);
-    
+
     std::vector<T> drain();  // returns all elements
-    
+
     // Shutdown
     void shutdown() noexcept;
     bool is_shutdown() const noexcept;
-    
+
 private:
     // Monitor pattern for synchronization
     struct queue_data {
         Container items;
         bool shutdown_requested = false;
     };
-    
+
     mutable std::mutex mtx_;
     std::condition_variable cv_;
     queue_data data_;
@@ -636,36 +636,36 @@ class io_context : public execution_context {
 public:
     class executor_type;
     class work_guard;
-    
+
     // Constructor with optional thread count (concurrency_hint)
     explicit io_context(std::size_t concurrency_hint = 1);
     ~io_context() override;
-    
+
     // Run event loop
     std::size_t run();
     std::size_t run_one();
     std::size_t poll();      // non-blocking
     std::size_t poll_one();  // non-blocking
-    
+
     // Run with multiple threads
     template<typename CompletionToken>
     void run_for(std::size_t thread_count, CompletionToken&& token);
-    
+
     // Lifecycle control
     void stop() noexcept;
     void restart();
     bool stopped() const noexcept override;
-    
+
     // Execute tasks
     template<typename Handler>
     void post(Handler&& handler);
-    
+
     template<typename Handler>
     void dispatch(Handler&& handler);
-    
+
     // Executor access
     executor_type get_executor() noexcept;
-    
+
 private:
     class impl;
     std::unique_ptr<impl> impl_;
@@ -686,39 +686,39 @@ public:
     // C++23: std::move_only_function instead of std::function
     using work_item = std::move_only_function<void()>;
     using work_queue_type = work_queue<work_item>;
-    
+
     explicit io_context_impl(std::size_t concurrency_hint);
     ~io_context_impl();
-    
+
     std::size_t run();
     void stop() noexcept;
     bool stopped() const noexcept;
-    
+
     void post(work_item handler);
     void dispatch(work_item handler);
-    
+
     // Thread ID management - for dispatch optimization
     bool running_in_this_thread() const noexcept;
-    
+
 private:
     void run_worker();
     void process_one_handler();
-    
+
     // State management
     struct state {
         bool stopped = false;
         std::size_t outstanding_work = 0;
     };
-    
+
     mutable std::mutex state_mtx_;
     state state_;
-    
+
     // Work queue
     work_queue_type work_queue_;
-    
+
     // Thread pool
     std::vector<std::jthread> worker_threads_;
-    
+
     // Thread tracking for dispatch optimization (C++23: std::flat_set)
     std::flat_set<std::thread::id> worker_thread_ids_;
     thread_local static bool is_worker_thread_;
@@ -726,6 +726,37 @@ private:
 
 } // namespace svarog::execution::detail
 ```
+
+#### 3.3 Coroutine-First API Surface
+
+**Goal:** Preserve the original C++20 coroutine scheduler by making `io_context` the canonical awaitable executor.
+
+- **Schedule Awaiter**
+    - Provide `io_context::schedule()` (or `this_coro::schedule(io_context&)`) that returns an awaiter resuming continuations through the context work queue.
+    - `await_suspend` posts the `std::coroutine_handle<>` without heap allocations; `await_resume` simply returns.
+- **co_spawn Helper**
+    - Add `co_spawn(io_context&, Awaitable&&, CompletionToken&&)` supporting detached, callback, and future-based completion tokens.
+    - Ensure exceptions propagate into the completion token rather than terminating the thread; cancellation (stop tokens, context stop) must signal `operation_aborted`.
+- **awaitable_task Integration**
+    - Finalize `svarog/execution/awaitable_task.hpp` so new coroutines can `co_return T` while capturing the associated executor from `io_context`.
+    - Provide adapters for legacy `task<>` coroutines to adopt the new executor-aware `awaitable_task` without refactoring user code.
+- **Executor Traits**
+    - Implement the traits/concepts necessary for `io_context::executor_type` to act as a coroutine executor (`this_coro::executor`, `associated_executor`, `std::execution::scheduler`).
+    - Document how strands and thread_pool surface the same coroutine-friendly hooks.
+
+**Example Usage**
+
+```cpp
+auto worker = [&]() -> svarog::execution::awaitable_task<void> {
+        co_await ctx.schedule();               // resume on io_context
+        auto bytes = co_await async_read(sock);
+        co_await async_write(sock, bytes);
+};
+
+svarog::execution::co_spawn(ctx, worker(), svarog::execution::detached);
+```
+
+This keeps coroutines as the primary abstraction while still allowing callback-style handlers for interoperability.
 
 **Key Differences from Current Scheduler:**
 
@@ -796,6 +827,9 @@ svarog/
 - [ ] Implement `io_context` with pimpl
 - [ ] Implement `strand`
 - [ ] Implement `work_guard`
+- [ ] Expose coroutine awaiters (`io_context::schedule`, `this_coro::executor`)
+- [ ] Add `co_spawn(io_context&, Awaitable&&, CompletionToken&&)`
+- [ ] Finalize `awaitable_task` + legacy `task<>` adapters
 - [ ] Migrate coroutines to new system
 - [ ] Remove `lockfree_ring_buffer.hpp`
 
@@ -805,12 +839,14 @@ svarog/
 - [ ] Performance benchmarks
 - [ ] Memory leak tests (valgrind/asan)
 - [ ] Thread safety tests (tsan)
+- [ ] Coroutine integration tests (resume thread, cancellation, exception propagation) green
 
 ### Documentation
 - [ ] API documentation (Doxygen)
 - [ ] Migration guide for users
 - [ ] Architecture decision records (ADR)
 - [ ] Example programs
+- [ ] Coroutine usage guide (`co_spawn`, `schedule`, cancellation patterns)
 
 ---
 
@@ -839,7 +875,7 @@ svarog/
 
 ---
 
-**Document Status:** Draft v1.0  
-**Date:** 2025-11-10  
-**Author:** Refactoring plan for svarogIO  
+**Document Status:** Draft v1.0
+**Date:** 2025-11-10
+**Author:** Refactoring plan for svarogIO
 **Review Required:** Yes

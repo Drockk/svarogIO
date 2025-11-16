@@ -80,7 +80,8 @@
         "future": "cpp",
         "ranges": "cpp",
         "typeindex": "cpp",
-        "expected": "cpp"
+        "expected": "cpp",
+        "latch": "cpp"
     },
     "C_Cpp.default.cppStandard": "c++23",
     "C_Cpp.default.configurationProvider": "ms-vscode.cmake-tools",

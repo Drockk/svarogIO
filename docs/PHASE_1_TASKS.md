@@ -1369,6 +1369,7 @@ worker.join();  // Exits cleanly after guard reset and queue empty
 
 ### 3.6 thread_pool Implementation
 **Estimated Time**: 3-4 days
+**Status**: ✅ **COMPLETE**
 
 **Design Decision**: RAII wrapper over `io_context` with managed worker threads using C++20 `std::jthread`.
 
@@ -1380,9 +1381,10 @@ worker.join();  // Exits cleanly after guard reset and queue empty
 
 #### 3.6.1 Header and Interface Design
 **Estimated Time**: 0.5 day
+**Status**: ✅ **COMPLETE**
 
-- [ ] Create `svarog/include/svarog/execution/thread_pool.hpp`
-- [ ] Add necessary includes
+- [x] Create `svarog/include/svarog/execution/thread_pool.hpp` ✅
+- [x] Add necessary includes ✅
   ```cpp
   #include <thread>          // std::jthread, hardware_concurrency
   #include <vector>          // std::vector
@@ -1391,7 +1393,7 @@ worker.join();  // Exits cleanly after guard reset and queue empty
   #include "svarog/execution/work_queue.hpp"
   #include "svarog/core/contracts.hpp"
   ```
-- [ ] Define `thread_pool` class
+- [x] Define `thread_pool` class ✅
   ```cpp
   namespace svarog::execution {
 
@@ -1441,15 +1443,16 @@ worker.join();  // Exits cleanly after guard reset and queue empty
   ```
 
 **Acceptance Criteria**:
-- Header compiles cleanly
-- API documentation complete (Doxygen)
-- Contracts documented (@pre, @post)
+- ✅ Header compiles cleanly
+- ⚠️ API documentation (Doxygen comments missing)
+- ✅ Contracts documented (SVAROG_EXPECTS in constructor)
 
 #### 3.6.2 Core Implementation
 **Estimated Time**: 2 days
+**Status**: ✅ **COMPLETE**
 
-- [ ] Create `svarog/source/execution/thread_pool.cpp`
-- [ ] Implement constructor
+- [x] Create `svarog/source/execution/thread_pool.cpp` ✅
+- [x] Implement constructor ✅
   ```cpp
   thread_pool::thread_pool(size_t num_threads) {
       SVAROG_EXPECTS(num_threads > 0);
@@ -1462,14 +1465,14 @@ worker.join();  // Exits cleanly after guard reset and queue empty
       }
   }
   ```
-- [ ] Implement destructor
+- [x] Implement destructor ✅
   ```cpp
   thread_pool::~thread_pool() {
       stop();
       // std::jthread auto-joins here
   }
   ```
-- [ ] Implement worker thread loop with stop_token
+- [x] Implement worker thread loop with stop_token ✅
   ```cpp
   void thread_pool::worker_thread(std::stop_token stoken) {
       while (!stoken.stop_requested() && !ctx_.stopped()) {
@@ -1487,25 +1490,25 @@ worker.join();  // Exits cleanly after guard reset and queue empty
       }
   }
   ```
-- [ ] Implement stop() method
+- [x] Implement stop() method ✅
   ```cpp
   void thread_pool::stop() noexcept {
-      if (!ctx_.stopped()) {
-          ctx_.stop();
+      if (!m_context.stopped()) {  // Fixed: was inverted
+          m_context.stop();
       }
-      for (auto& t : threads_) {
-          t.request_stop();  // Request stop on all jthreads
+      for (auto& thread : m_threads) {
+          thread.request_stop();
       }
   }
   ```
-- [ ] Implement utility methods
-  - [ ] `context()` - return `ctx_`
-  - [ ] `get_executor()` - return `ctx_.get_executor()`
-  - [ ] `post()` - delegate to `ctx_.post()`
-  - [ ] `stopped()` - return `ctx_.stopped()`
-  - [ ] `thread_count()` - return `threads_.size()`
-  - [ ] `make_strand()` - return `strand(get_executor())`
-- [ ] Implement `wait()` method (basic version)
+- [x] Implement utility methods ✅
+  - [x] `context()` - return `m_context` ✅
+  - [x] `get_executor()` - return `m_context.get_executor()` ✅
+  - [x] `post()` - delegate to `m_context.post()` ✅
+  - [x] `stopped()` - return `m_context.stopped()` ✅
+  - [x] `thread_count()` - return `m_threads.size()` ✅
+  - [ ] `make_strand()` - TODO (commented out, awaiting strand implementation)
+- [x] Implement `wait()` method (basic version) ✅
   ```cpp
   void thread_pool::wait() {
       // TODO: Wait for pending work completion
@@ -1515,7 +1518,11 @@ worker.join();  // Exits cleanly after guard reset and queue empty
   ```
 
 **Acceptance Criteria**:
-- All methods implemented
+- ✅ All methods implemented (except make_strand - blocked on Section 4)
+- ✅ Bug fixed: stop() condition corrected to `if (!m_context.stopped())`
+- ✅ Exception handling in worker_thread
+- ✅ RAII semantics (jthread auto-joins in destructor)
+- ✅ Added to CMakeLists.txt
 - Constructor starts threads immediately
 - Destructor joins all threads gracefully
 - Exception handling in worker threads

@@ -4,6 +4,7 @@ target_sources(
   "svarog"
   PRIVATE
     "source/svarog/execution/execution_context.cpp"
+    "source/svarog/execution/thread_pool.cpp"
     "source/svarog/execution/work_queue.cpp"
     "source/svarog/execution/work_guard.cpp"
     "source/svarog/io/io_context.cpp"
@@ -18,6 +19,7 @@ target_sources(
     FILES
       "include/svarog/core/contracts.hpp"
       "include/svarog/execution/execution_context.hpp"
+      "include/svarog/execution/thread_pool.hpp"
       "include/svarog/execution/work_queue.hpp"
       "include/svarog/execution/work_guard.hpp"
       "include/svarog/io/io_context.hpp"

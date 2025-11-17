@@ -3,6 +3,7 @@ add_library("svarog" SHARED)
 target_sources(
   "svarog"
   PRIVATE
+    "source/svarog/execution/co_spawn.cpp"
     "source/svarog/execution/execution_context.cpp"
     "source/svarog/execution/thread_pool.cpp"
     "source/svarog/execution/work_queue.cpp"
@@ -18,6 +19,8 @@ target_sources(
     BASE_DIRS "include"
     FILES
       "include/svarog/core/contracts.hpp"
+      "include/svarog/execution/awaitable_task.hpp"
+      "include/svarog/execution/co_spawn.hpp"
       "include/svarog/execution/execution_context.hpp"
       "include/svarog/execution/thread_pool.hpp"
       "include/svarog/execution/work_queue.hpp"

@@ -6,9 +6,12 @@
 #include "svarog/execution/execution_context.hpp"
 #include "svarog/execution/work_queue.hpp"
 
+#include <coroutine>
+
 namespace svarog::execution {
 class executor_work_guard;
-}
+struct schedule_operation;
+}  // namespace svarog::execution
 
 namespace svarog::io {
 
@@ -56,6 +59,8 @@ public:
 
     bool running_in_this_thread() const noexcept;
 
+    execution::schedule_operation schedule() noexcept;
+
 private:
     std::atomic<bool> m_stopped{false};
     execution::work_queue m_handlers;
@@ -63,6 +68,7 @@ private:
     inline static thread_local io_context* current_context_ = nullptr;
 
     friend class execution::executor_work_guard;
+    friend struct execution::schedule_operation;
 };
 
 }  // namespace svarog::io

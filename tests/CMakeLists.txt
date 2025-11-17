@@ -17,6 +17,7 @@ add_subdirectory("core")
 
 add_svarog_test(execution/execution_context_tests.cpp)
 add_svarog_test(execution/work_queue_basic_tests.cpp)
+add_svarog_test(execution/coroutine_tests.cpp)
 add_svarog_test(io/io_context_tests.cpp)
 
 # ============================================================================

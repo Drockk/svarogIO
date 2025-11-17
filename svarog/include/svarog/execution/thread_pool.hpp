@@ -25,6 +25,7 @@ public:
     }
 
     void post(work_item&& t_item) {
+        SVAROG_EXPECTS(item != nullptr);
         m_context.post(std::forward<work_item>(t_item));
     }
 

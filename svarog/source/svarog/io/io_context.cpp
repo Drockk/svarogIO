@@ -2,6 +2,8 @@
 
 #include <thread>
 
+#include "svarog/execution/co_spawn.hpp"
+
 namespace svarog::io {
 
 io_context::io_context([[maybe_unused]] size_t t_concurrency_hint) {
@@ -11,8 +13,8 @@ io_context::io_context([[maybe_unused]] size_t t_concurrency_hint) {
 }
 
 void io_context::run() {
-    // Mark this thread as running this io_context
     current_context_ = this;
+    execution::this_coro::current_context_ = this;
 
     while (!stopped()) {
         auto handler_result = m_handlers.try_pop();
@@ -32,8 +34,8 @@ void io_context::run() {
         (*handler_result)();
     }
 
-    // Clear thread-local context on exit
     current_context_ = nullptr;
+    execution::this_coro::current_context_ = nullptr;
 }
 
 size_t io_context::run_one() {
@@ -76,6 +78,10 @@ io_context& io_context::executor_type::context() const noexcept {
 
 bool io_context::running_in_this_thread() const noexcept {
     return current_context_ == this;
+}
+
+execution::schedule_operation io_context::schedule() noexcept {
+    return execution::schedule_operation{this};
 }
 
 }  // namespace svarog::io

@@ -22,6 +22,7 @@ awaitable_task<void> spawn_impl(Awaitable awaitable) {
 }  // namespace detail
 
 template <typename Awaitable>
+    requires std::is_rvalue_reference_v<Awaitable&&>
 void co_spawn(io::io_context& ctx, Awaitable&& awaitable, detached_t) {
     auto task_copy = std::forward<Awaitable>(awaitable);
 
@@ -44,12 +45,13 @@ void co_spawn(io::io_context& ctx, Awaitable&& awaitable, detached_t) {
             };
         };
 
-        auto launcher = [](Awaitable t) -> detached_coroutine { co_await std::move(t); };
+        auto launcher = [](auto t) -> detached_coroutine { co_await std::move(t); };
 
         launcher(std::move(task));
     });
 }
 
+// Explicit instantiations
 template void co_spawn(io::io_context&, awaitable_task<void>&&, detached_t);
 template void co_spawn(io::io_context&, awaitable_task<int>&&, detached_t);
 

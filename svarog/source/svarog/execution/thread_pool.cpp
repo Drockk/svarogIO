@@ -7,7 +7,7 @@ thread_pool::thread_pool(size_t t_num_threads) {
     SVAROG_EXPECTS(t_num_threads > 0);
 
     m_threads.reserve(t_num_threads);
-    for (size_t i{0}; i < t_num_threads; ++i) {
+    for (size_t i = 0; i < t_num_threads; ++i) {
         m_threads.emplace_back([this](std::stop_token t_stoptoken) { worker_thread(t_stoptoken); });
     }
 }

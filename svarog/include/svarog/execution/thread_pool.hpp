@@ -24,9 +24,8 @@ public:
         return m_context.get_executor();
     }
 
-    void post(work_item&& t_item) {
-        SVAROG_EXPECTS(item != nullptr);
-        m_context.post(std::forward<work_item>(t_item));
+    void post(auto&& t_item) {
+        m_context.post(std::forward<decltype(t_item)>(t_item));
     }
 
     void stop() noexcept;

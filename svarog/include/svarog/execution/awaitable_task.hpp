@@ -37,7 +37,7 @@ struct awaitable_task_promise_base {
         }
     };
 
-    auto final_suspend() noexcept {
+    auto final_suspend() noexcept -> final_awaiter {
         return final_awaiter{};
     }
 
@@ -124,8 +124,7 @@ public:
         return !m_handle || m_handle.done();
     }
 
-    template <typename Promise>
-    std::coroutine_handle<> await_suspend(std::coroutine_handle<Promise> awaiting) noexcept {
+    auto await_suspend(auto awaiting) noexcept -> std::coroutine_handle<> {
         m_handle.promise().m_continuation = awaiting;
         return m_handle;
     }

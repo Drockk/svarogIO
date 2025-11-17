@@ -30,6 +30,7 @@ struct detached_t {};
 inline constexpr detached_t detached{};
 
 template <typename Awaitable>
+    requires std::is_rvalue_reference_v<Awaitable&&>
 void co_spawn(io::io_context& ctx, Awaitable&& awaitable, detached_t);
 
 template <typename Awaitable, typename CompletionToken>

@@ -112,6 +112,22 @@
     // Legacy C_Cpp settings (fallback)
     "C_Cpp.clang_format_style": "file",
     "C_Cpp.clang_format_fallbackStyle": "LLVM",
+    // Clang-tidy configuration
+    "clangd.arguments": [
+        "--clang-tidy",
+        "--background-index",
+        "--compile-commands-dir=${workspaceFolder}/build/release",
+        "--header-insertion=never",
+        "--completion-style=detailed",
+        "--fallback-style=LLVM"
+    ],
+    "C_Cpp.codeAnalysis.clangTidy.enabled": true,
+    "C_Cpp.codeAnalysis.clangTidy.path": "clang-tidy",
+    "C_Cpp.codeAnalysis.clangTidy.useBuildPath": true,
+    "C_Cpp.codeAnalysis.clangTidy.args": [
+        "--config-file=${workspaceFolder}/.clang-tidy"
+    ],
+    "C_Cpp.codeAnalysis.runAutomatically": true,
     // CMake formatting
     "[cmake]": {
         "editor.tabSize": 4,

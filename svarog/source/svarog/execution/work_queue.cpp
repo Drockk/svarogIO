@@ -1,13 +1,19 @@
 #include "svarog/execution/work_queue.hpp"
 
+#include <atomic>
 #include <condition_variable>
+#include <cstddef>
 #include <deque>
+#include <memory>
 #include <mutex>
+#include <utility>
+
+#include "svarog/core/contracts.hpp"
 
 class work_queue_impl {
 public:
     bool push(svarog::execution::work_item&& t_item) {
-        std::lock_guard lock(m_mutex);
+        const std::lock_guard guard(m_mutex);
 
         if (m_stopped.load()) {
             return false;
@@ -34,7 +40,7 @@ public:
     }
 
     svarog::execution::expected<svarog::execution::work_item, svarog::execution::queue_error> try_pop() noexcept {
-        std::lock_guard lock(m_mutex);
+        const std::lock_guard guard(m_mutex);
 
         if (m_queue.empty()) {
             return svarog::execution::unexpected(m_stopped.load() ? svarog::execution::queue_error::stopped
@@ -47,12 +53,12 @@ public:
     }
 
     size_t size() const noexcept {
-        std::lock_guard lock(m_mutex);
+        const std::lock_guard guard(m_mutex);
         return m_queue.size();
     }
 
     bool empty() const noexcept {
-        std::lock_guard lock(m_mutex);
+        const std::lock_guard guard(m_mutex);
         return m_queue.empty();
     }
 

@@ -1,5 +1,6 @@
 #include "svarog/execution/work_guard.hpp"
 
+#include <atomic>
 #include <utility>  // std::exchange
 
 #include "svarog/io/io_context.hpp"
@@ -8,7 +9,7 @@
 
 namespace svarog::execution {
 
-executor_work_guard::executor_work_guard(io::io_context& ctx) noexcept : m_context(&ctx) {
+executor_work_guard::executor_work_guard(io::io_context& t_ctx) noexcept : m_context(&t_ctx) {
     m_context->m_work_count.fetch_add(1, std::memory_order_relaxed);
 }
 
@@ -16,14 +17,14 @@ executor_work_guard::~executor_work_guard() {
     reset();
 }
 
-executor_work_guard::executor_work_guard(executor_work_guard&& other) noexcept
-    : m_context(std::exchange(other.m_context, nullptr)) {
+executor_work_guard::executor_work_guard(executor_work_guard&& t_other) noexcept
+    : m_context(std::exchange(t_other.m_context, nullptr)) {
 }
 
-executor_work_guard& executor_work_guard::operator=(executor_work_guard&& other) noexcept {
-    if (this != &other) {
+executor_work_guard& executor_work_guard::operator=(executor_work_guard&& t_other) noexcept {
+    if (this != &t_other) {
         reset();
-        m_context = std::exchange(other.m_context, nullptr);
+        m_context = std::exchange(t_other.m_context, nullptr);
     }
     return *this;
 }

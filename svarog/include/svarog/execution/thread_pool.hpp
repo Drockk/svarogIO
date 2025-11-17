@@ -49,6 +49,6 @@ private:
     io::io_context m_context;
     std::vector<std::jthread> m_threads;
 
-    void worker_thread(std::stop_token t_stoken);
+    void worker_thread(const std::stop_token& t_stoptoken);
 };
 }  // namespace svarog::execution

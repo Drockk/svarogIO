@@ -19,7 +19,7 @@ struct schedule_operation {
         return false;
     }
 
-    void await_suspend(std::coroutine_handle<> handle);
+    void await_suspend(std::coroutine_handle<> handle) const;
 
     void await_resume() const noexcept {
     }

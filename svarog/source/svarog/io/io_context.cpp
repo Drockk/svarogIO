@@ -1,6 +1,10 @@
 #include "svarog/io/io_context.hpp"
 
+#include <atomic>
+#include <cstddef>
+#include <functional>
 #include <thread>
+#include <utility>
 
 #include "svarog/execution/co_spawn.hpp"
 
@@ -66,10 +70,10 @@ io_context::executor_type io_context::get_executor() noexcept {
     return executor_type(this);
 }
 
-void io_context::executor_type::execute(std::move_only_function<void()> f) const {
+void io_context::executor_type::execute(std::move_only_function<void()> t_f) const {
     // Ignore return value - if push fails, context is stopped and work will not execute
     // This is expected behavior for executor pattern
-    [[maybe_unused]] bool pushed = m_context->m_handlers.push(std::move(f));
+    [[maybe_unused]] const bool is_pushed = m_context->m_handlers.push(std::move(t_f));
 }
 
 io_context& io_context::executor_type::context() const noexcept {

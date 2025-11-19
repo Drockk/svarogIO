@@ -32,6 +32,7 @@ executor_work_guard& executor_work_guard::operator=(executor_work_guard&& t_othe
 void executor_work_guard::reset() noexcept {
     if (m_context != nullptr) {
         m_context->m_work_count.fetch_sub(1, std::memory_order_release);
+        m_context->m_handlers.notify_all();  // Wake up any blocked run() calls
         m_context = nullptr;
     }
 }

@@ -3,6 +3,7 @@
 #include <thread>
 #include <vector>
 
+#include "svarog/execution/work_guard.hpp"
 #include "svarog/io/io_context.hpp"
 
 namespace svarog::execution {
@@ -38,8 +39,6 @@ public:
         return m_threads.size();
     }
 
-    void wait();
-
     // TODO: Implement when strands will be ready
     // auto make_strand() {
     //     return {};
@@ -47,6 +46,7 @@ public:
 
 private:
     io::io_context m_context;
+    executor_work_guard m_work_guard;
     std::vector<std::jthread> m_threads;
 
     void worker_thread(const std::stop_token& t_stoptoken);

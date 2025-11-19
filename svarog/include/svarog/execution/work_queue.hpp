@@ -48,6 +48,7 @@ public:
     [[nodiscard]] bool push(work_item&& t_item);
 
     [[nodiscard]] expected<work_item, queue_error> pop() noexcept;
+    [[nodiscard]] expected<work_item, queue_error> pop(std::function<bool()> t_stop_predicate) noexcept;
     [[nodiscard]] expected<work_item, queue_error> try_pop() noexcept;
 
     [[nodiscard]] size_t size() const noexcept;
@@ -55,6 +56,7 @@ public:
     void stop() noexcept;
     [[nodiscard]] bool stopped() const noexcept;
     void clear() noexcept;
+    void notify_all() noexcept;
 
 private:
     std::unique_ptr<work_queue_impl> m_impl;

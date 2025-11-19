@@ -124,7 +124,6 @@ int main() {
 
         std::cout << "Waiting for tasks to complete..." << std::endl;
         pool.stop();
-        pool.wait();
 
         std::cout << "All tasks completed" << std::endl;
     }

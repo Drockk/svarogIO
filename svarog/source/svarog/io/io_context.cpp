@@ -3,10 +3,10 @@
 #include <atomic>
 #include <cstddef>
 #include <functional>
-#include <thread>
 #include <utility>
 
 #include "svarog/execution/co_spawn.hpp"
+#include "svarog/execution/work_queue.hpp"
 
 namespace svarog::io {
 
@@ -21,21 +21,29 @@ void io_context::run() {
     execution::this_coro::current_context_ = this;
 
     while (!stopped()) {
-        auto handler_result = m_handlers.try_pop();
+        // If we have work guards, we block waiting for work or notification
+        if (m_work_count.load(std::memory_order_acquire) > 0) {
+            auto handler_result = m_handlers.pop([this] { return m_work_count.load(std::memory_order_acquire) == 0; });
 
-        if (!handler_result.has_value()) {
-            // Queue empty - check if we should exit or wait
-            if (m_work_count.load(std::memory_order_acquire) == 0) {
-                // No work_guard active - exit naturally
+            if (!handler_result.has_value()) {
+                if (handler_result.error() == execution::queue_error::stopped) {
+                    break;
+                }
+                // Empty means woken up by predicate (work_count == 0)
+                // Continue loop to handle non-blocking drain
+                continue;
+            }
+            (*handler_result)();
+        } else {
+            // No work guards - drain queue non-blocking and exit
+            auto handler_result = m_handlers.try_pop();
+
+            if (!handler_result.has_value()) {
+                // Queue empty and no work guards -> exit
                 break;
             }
-            // Work guard active but queue empty - yield and retry
-            std::this_thread::yield();
-            continue;
+            (*handler_result)();
         }
-
-        // Execute handler
-        (*handler_result)();
     }
 
     current_context_ = nullptr;

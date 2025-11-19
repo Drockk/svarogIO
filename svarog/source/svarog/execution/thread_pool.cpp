@@ -4,11 +4,12 @@
 #include <exception>
 
 #include "svarog/core/contracts.hpp"
+#include "svarog/execution/work_guard.hpp"
 
 #include <stop_token>
 
 namespace svarog::execution {
-thread_pool::thread_pool(size_t t_num_threads) {
+thread_pool::thread_pool(size_t t_num_threads) : m_work_guard(make_work_guard(m_context)) {
     SVAROG_EXPECTS(t_num_threads > 0);
 
     m_threads.reserve(t_num_threads);
@@ -25,7 +26,7 @@ void thread_pool::worker_thread(const std::stop_token& t_stoptoken) {
     while (!t_stoptoken.stop_requested() && !m_context.stopped()) {
         try {
             m_context.run();
-            if (m_context.stopped()) {
+            if (m_context.stopped() || t_stoptoken.stop_requested()) {
                 break;
             }
             m_context.restart();
@@ -42,20 +43,11 @@ void thread_pool::worker_thread(const std::stop_token& t_stoptoken) {
 }
 
 void thread_pool::stop() noexcept {
-    if (!m_context.stopped()) {
-        m_context.stop();
-    }
+    m_work_guard.reset();  // Release work guard to allow run() to exit when empty
+    m_context.stop();      // Always stop the context
 
     for (auto& thread : m_threads) {
         thread.request_stop();
-    }
-}
-
-void thread_pool::wait() {
-    for (auto& thread : m_threads) {
-        if (thread.joinable()) {
-            thread.join();
-        }
     }
 }
 }  // namespace svarog::execution

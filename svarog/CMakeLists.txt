@@ -5,6 +5,7 @@ target_sources(
   PRIVATE
     "source/svarog/execution/co_spawn.cpp"
     "source/svarog/execution/execution_context.cpp"
+    "source/svarog/execution/strand.cpp"
     "source/svarog/execution/thread_pool.cpp"
     "source/svarog/execution/work_queue.cpp"
     "source/svarog/execution/work_guard.cpp"
@@ -21,6 +22,7 @@ target_sources(
       "include/svarog/execution/awaitable_task.hpp"
       "include/svarog/execution/co_spawn.hpp"
       "include/svarog/execution/execution_context.hpp"
+      "include/svarog/execution/strand.hpp"
       "include/svarog/execution/thread_pool.hpp"
       "include/svarog/execution/work_queue.hpp"
       "include/svarog/execution/work_guard.hpp"

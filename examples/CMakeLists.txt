@@ -8,6 +8,7 @@ add_subdirectory(work_queue)
 add_subdirectory(work_guard)
 add_subdirectory(io_context)
 add_subdirectory(thread_pool)
+add_subdirectory(strand_example)
 
 add_custom_target("examples")
 add_dependencies("examples"
@@ -19,4 +20,5 @@ add_dependencies("examples"
     "work_guard_example"
     "io_context_example"
     "thread_pool_example"
+    "strand_example"
 )

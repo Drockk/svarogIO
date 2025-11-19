@@ -139,5 +139,6 @@
     // Line length ruler
     "editor.rulers": [
         120
-    ]
+    ],
+    "clang-format.assumeFilename": ".clang-format"
 }

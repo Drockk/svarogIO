@@ -1,13 +1,20 @@
 #include "svarog/execution/work_queue.hpp"
 
+#include <atomic>
 #include <condition_variable>
+#include <cstddef>
 #include <deque>
+#include <functional>
+#include <memory>
 #include <mutex>
+#include <utility>
+
+#include "svarog/core/contracts.hpp"
 
 class work_queue_impl {
 public:
     bool push(svarog::execution::work_item&& t_item) {
-        std::lock_guard lock(m_mutex);
+        const std::lock_guard guard(m_mutex);
 
         if (m_stopped.load()) {
             return false;
@@ -33,8 +40,28 @@ public:
         return item;
     }
 
+    svarog::execution::expected<svarog::execution::work_item, svarog::execution::queue_error>
+    pop(std::function<bool()> t_stop_predicate) noexcept {
+        std::unique_lock lock(m_mutex);
+
+        m_cv.wait(lock,
+                  [this, &t_stop_predicate] { return !m_queue.empty() || m_stopped.load() || t_stop_predicate(); });
+
+        if (m_stopped.load()) {
+            return svarog::execution::unexpected(svarog::execution::queue_error::stopped);
+        }
+
+        if (m_queue.empty()) {
+            return svarog::execution::unexpected(svarog::execution::queue_error::empty);
+        }
+
+        auto item = std::move(m_queue.front());
+        m_queue.pop_front();
+        return item;
+    }
+
     svarog::execution::expected<svarog::execution::work_item, svarog::execution::queue_error> try_pop() noexcept {
-        std::lock_guard lock(m_mutex);
+        const std::lock_guard guard(m_mutex);
 
         if (m_queue.empty()) {
             return svarog::execution::unexpected(m_stopped.load() ? svarog::execution::queue_error::stopped
@@ -47,12 +74,12 @@ public:
     }
 
     size_t size() const noexcept {
-        std::lock_guard lock(m_mutex);
+        const std::lock_guard guard(m_mutex);
         return m_queue.size();
     }
 
     bool empty() const noexcept {
-        std::lock_guard lock(m_mutex);
+        const std::lock_guard guard(m_mutex);
         return m_queue.empty();
     }
 
@@ -63,6 +90,14 @@ public:
 
     bool stopped() const noexcept {
         return m_stopped.load();
+    }
+
+    void clear() noexcept {
+        m_queue.clear();
+    }
+
+    void notify_all() noexcept {
+        m_cv.notify_all();
     }
 
 private:
@@ -87,6 +122,10 @@ expected<work_item, queue_error> work_queue::pop() noexcept {
     return m_impl->pop();
 }
 
+expected<work_item, queue_error> work_queue::pop(std::function<bool()> t_stop_predicate) noexcept {
+    return m_impl->pop(std::move(t_stop_predicate));
+}
+
 expected<work_item, queue_error> work_queue::try_pop() noexcept {
     return m_impl->try_pop();
 }
@@ -105,6 +144,14 @@ void work_queue::stop() noexcept {
 
 bool work_queue::stopped() const noexcept {
     return m_impl->stopped();
+}
+
+void work_queue::clear() noexcept {
+    m_impl->clear();
+}
+
+void work_queue::notify_all() noexcept {
+    m_impl->notify_all();
 }
 
 }  // namespace svarog::execution

@@ -1,0 +1,258 @@
+# svarogIO Examples
+
+This directory contains practical examples demonstrating how to use the svarogIO library components.
+
+## Building Examples
+
+```bash
+# Configure and build
+cmake --preset=release
+cmake --build --preset=release
+
+# Run all examples
+./build/release/examples/execution_context_example/execution_context_example
+./build/release/examples/work_queue_example/work_queue_example
+./build/release/examples/work_guard_example/work_guard_example
+./build/release/examples/io_context_example/io_context_example
+./build/release/examples/thread_pool_example/thread_pool_example
+./build/release/examples/simple_coroutine/simple_coroutine
+```
+
+## Examples Overview
+
+### 1. execution_context_example
+**File**: `execution_context/main.cpp`
+
+Demonstrates the service registry pattern:
+- Adding services with `add_service()`
+- Creating services with `make_service()`
+- Accessing services with `use_service()`
+- Lazy initialization with `use_or_make_service()`
+- Service shutdown hooks
+- Service lifecycle management
+
+**Key Concepts**:
+- Type-safe service registry
+- Automatic shutdown hook invocation
+- Thread-safe service access
+- RAII resource management
+
+### 2. work_queue_example
+**File**: `work_queue/main.cpp`
+
+Demonstrates thread-safe MPMC queue:
+- Basic push/pop operations
+- `try_pop()` for non-blocking access
+- Multi-producer multi-consumer pattern
+- Queue lifecycle (stop, clear)
+- Error handling with `std::expected`
+
+**Key Concepts**:
+- FIFO ordering guarantee
+- Thread-safe operations
+- Producer-consumer patterns
+- Graceful shutdown
+
+### 3. work_guard_example
+**File**: `work_guard/main.cpp`
+
+Demonstrates RAII lifetime management:
+- Preventing premature `run()` exit
+- Manual control with `reset()`
+- Move semantics
+- Multiple guards on same context
+- Delayed work posting
+
+**Key Concepts**:
+- RAII pattern
+- Lifetime management
+- Work count tracking
+- Move-only semantics
+
+### 4. io_context_example
+**File**: `io_context/main.cpp`
+
+Demonstrates event loop and async execution:
+- Basic `post()` and `run()`
+- `dispatch()` vs `post()` semantics
+- Multi-threaded execution
+- `run_one()` for step execution
+- `stop()` and `restart()`
+- Executor pattern
+
+**Key Concepts**:
+- Event loop architecture
+- Thread-safe work submission
+- Immediate vs deferred execution
+- Multi-threaded event processing
+
+### 5. thread_pool_example
+**File**: `thread_pool/main.cpp`
+
+Demonstrates RAII thread pool management:
+- Basic thread pool usage
+- CPU-bound work distribution
+- Access to underlying `io_context`
+- Producer-consumer pattern
+- Graceful shutdown
+- Automatic RAII cleanup
+
+**Key Concepts**:
+- RAII thread management
+- Work distribution
+- Resource cleanup
+- Parallel task execution
+
+### 6. simple_coroutine
+**File**: `simple_coroutine/main.cpp`
+
+Demonstrates C++20 coroutines integration:
+- `awaitable_task<T>` coroutine type
+- `co_await ctx.schedule()` suspension
+- `co_spawn()` for launching coroutines
+- Nested coroutine calls
+- Return value propagation
+
+**Key Concepts**:
+- C++20 coroutines
+- Async/await pattern
+- Coroutine composition
+- Zero-cost abstraction
+
+## Architecture Overview
+
+```
+execution_context (base)
+    ├── Service Registry
+    └── io_context (derived)
+            ├── work_queue (internal)
+            ├── Executor API
+            ├── Coroutine Support
+            │   ├── schedule() awaiter
+            │   ├── awaitable_task<T>
+            │   └── co_spawn()
+            └── work_guard (lifetime)
+
+thread_pool (wrapper)
+    └── io_context + std::jthread
+```
+
+## Design Patterns
+
+### 1. RAII Pattern
+All components use RAII for resource management:
+- `execution_context` - Service lifecycle
+- `work_guard` - Work count management
+- `thread_pool` - Thread lifetime
+- `awaitable_task<T>` - Coroutine handle
+
+### 2. Service Registry Pattern
+```cpp
+execution_context ctx;
+auto& service = ctx.make_service<MyService>(args...);
+auto& existing = ctx.use_service<MyService>();
+```
+
+### 3. Executor Pattern
+```cpp
+auto executor = ctx.get_executor();
+executor.execute([]{  });
+```
+
+### 4. Async/Await Pattern
+```cpp
+auto task() -> awaitable_task<int> {
+    co_await ctx.schedule();
+    co_return 42;
+}
+co_spawn(ctx, task(), detached);
+```
+
+## Performance Characteristics
+
+Based on benchmarks (see `benchmarks/` directory):
+
+| Component | Throughput | Latency |
+|-----------|-----------|---------|
+| `work_queue` | 18.8M ops/sec | ~53ns |
+| `io_context` (1 thread) | 10.7M ops/sec | P50: 412ns |
+| `io_context` (4 threads) | 5.4M ops/sec | P99: 3.6µs |
+
+All components are:
+- **Lock-free** where possible (`work_queue` uses mutex)
+- **Zero-copy** for move-only types
+- **Thread-safe** for concurrent access
+- **Exception-safe** with strong guarantees
+
+## Common Patterns
+
+### Pattern 1: Event Loop with Work Guard
+```cpp
+io::io_context ctx;
+auto guard = make_work_guard(ctx);
+
+std::jthread worker([&]{ ctx.run(); });
+
+// Post work asynchronously
+ctx.post([&]{
+    // Do work...
+    guard.reset();  // Signal completion
+});
+
+worker.join();
+```
+
+### Pattern 2: Thread Pool for Parallel Tasks
+```cpp
+execution::thread_pool pool(4);
+
+for (auto& task : tasks) {
+    pool.post([task]{
+        process(task);
+    });
+}
+
+pool.stop();
+pool.wait();
+```
+
+### Pattern 3: Coroutine Async Operations
+```cpp
+auto async_operation() -> awaitable_task<Result> {
+    co_await ctx.schedule();  // Switch to io_context
+    Result r = compute();
+    co_return r;
+}
+
+co_spawn(ctx, async_operation(), detached);
+```
+
+## Error Handling
+
+All components use modern C++ error handling:
+- `std::expected<T, E>` for recoverable errors (`work_queue`)
+- `noexcept` for operations that cannot fail
+- Exceptions for programming errors (contract violations)
+- `SVAROG_EXPECTS/ENSURES` for precondition/postcondition checks
+
+## Thread Safety
+
+| Component | Thread Safety |
+|-----------|---------------|
+| `execution_context` | All methods thread-safe |
+| `work_queue` | MPMC safe |
+| `io_context` | All methods thread-safe |
+| `work_guard` | Constructor/destructor NOT thread-safe, methods are |
+| `thread_pool` | All methods thread-safe |
+| `awaitable_task<T>` | Single-threaded ownership |
+
+## Next Steps
+
+1. Read the [Phase 1 Tasks](../docs/PHASE_1_TASKS.md) for implementation details
+2. See [Coroutine Examples](../docs/COROUTINE_EXAMPLES.md) for advanced patterns
+3. Check [Unit Test Scenarios](../docs/UNIT_TEST_SCENARIOS.md) for usage patterns
+4. Review benchmarks in `benchmarks/` for performance characteristics
+
+## License
+
+See [LICENSE.md](../LICENSE.md) for licensing information.

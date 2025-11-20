@@ -1,5 +1,7 @@
 add_executable(svarog_benchmarks
     execution/work_queue_bench.cpp
+    execution/strand_bench.cpp
+    io/io_context_bench.cpp
 )
 target_link_libraries(svarog_benchmarks PRIVATE
     svarog

@@ -17,6 +17,15 @@ add_subdirectory("core")
 
 add_svarog_test(execution/execution_context_tests.cpp)
 add_svarog_test(execution/work_queue_basic_tests.cpp)
+add_svarog_test(execution/thread_pool_tests.cpp)
+add_svarog_test(execution/strand_tests.cpp)
+add_svarog_test(execution/coroutine_tests.cpp)
+add_svarog_test(io/io_context_tests.cpp)
+
+# ============================================================================
+# Integration Tests
+# ============================================================================
+add_svarog_test(integration/phase1_integration_tests.cpp)
 
 # ============================================================================
 # Future: Add more test modules here

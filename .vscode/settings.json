@@ -80,7 +80,9 @@
         "future": "cpp",
         "ranges": "cpp",
         "typeindex": "cpp",
-        "expected": "cpp"
+        "expected": "cpp",
+        "latch": "cpp",
+        "__threading_support": "cpp"
     },
     "C_Cpp.default.cppStandard": "c++23",
     "C_Cpp.default.configurationProvider": "ms-vscode.cmake-tools",
@@ -92,20 +94,40 @@
     "editor.formatOnPaste": false,
     // C++ formatting with clang-format
     "[cpp]": {
-        "editor.defaultFormatter": "ms-vscode.cpptools",
+        "editor.defaultFormatter": "xaver.clang-format",
         "editor.formatOnSave": true,
         "editor.tabSize": 4,
         "editor.insertSpaces": true
     },
     "[c]": {
-        "editor.defaultFormatter": "ms-vscode.cpptools",
+        "editor.defaultFormatter": "xaver.clang-format",
         "editor.formatOnSave": true,
         "editor.tabSize": 4,
         "editor.insertSpaces": true
     },
-    // Use clang-format style file
+    // Clang-format configuration
+    "clang-format.executable": "clang-format",
+    "clang-format.style": "file",
+    "clang-format.fallbackStyle": "LLVM",
+    // Legacy C_Cpp settings (fallback)
     "C_Cpp.clang_format_style": "file",
     "C_Cpp.clang_format_fallbackStyle": "LLVM",
+    // Clang-tidy configuration
+    "clangd.arguments": [
+        "--clang-tidy",
+        "--background-index",
+        "--compile-commands-dir=${workspaceFolder}/build/release",
+        "--header-insertion=never",
+        "--completion-style=detailed",
+        "--fallback-style=LLVM"
+    ],
+    "C_Cpp.codeAnalysis.clangTidy.enabled": true,
+    "C_Cpp.codeAnalysis.clangTidy.path": "clang-tidy",
+    "C_Cpp.codeAnalysis.clangTidy.useBuildPath": true,
+    "C_Cpp.codeAnalysis.clangTidy.args": [
+        "--config-file=${workspaceFolder}/.clang-tidy"
+    ],
+    "C_Cpp.codeAnalysis.runAutomatically": true,
     // CMake formatting
     "[cmake]": {
         "editor.tabSize": 4,
@@ -117,5 +139,6 @@
     // Line length ruler
     "editor.rulers": [
         120
-    ]
+    ],
+    "clang-format.assumeFilename": ".clang-format"
 }

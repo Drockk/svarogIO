@@ -1,5 +1,6 @@
 #include <atomic>
 #include <chrono>
+#include <memory>
 #include <thread>
 #include <vector>
 
@@ -104,10 +105,10 @@ TEST_CASE("strand: throughput with multiple strands", "[strand][bench][throughpu
     constexpr int tasks_per_strand = 5000;
 
     thread_pool pool(4);
-    std::vector<strand<io_context::executor_type>> strands;
+    std::vector<std::unique_ptr<strand<io_context::executor_type>>> strands;
 
     for (int i = 0; i < num_strands; ++i) {
-        strands.emplace_back(pool.get_executor());
+        strands.push_back(std::make_unique<strand<io_context::executor_type>>(pool.get_executor()));
     }
 
     std::atomic<int> total_completed{0};
@@ -117,7 +118,7 @@ TEST_CASE("strand: throughput with multiple strands", "[strand][bench][throughpu
 
         for (int s = 0; s < num_strands; ++s) {
             for (int i = 0; i < tasks_per_strand; ++i) {
-                strands[static_cast<size_t>(s)].post([&] { total_completed++; });
+                strands[static_cast<size_t>(s)]->post([&] { total_completed++; });
             }
         }
 

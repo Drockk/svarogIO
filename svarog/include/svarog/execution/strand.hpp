@@ -62,14 +62,11 @@ typename strand<Executor>::executor_type strand<Executor>::get_executor() const 
 
 template <typename Executor>
 void strand<Executor>::execute(auto&& t_handler) {
-    SVAROG_EXPECTS(t_handler != nullptr);  // Handler must be valid
     post(std::forward<decltype(t_handler)>(t_handler));
 }
 
 template <typename Executor>
 void strand<Executor>::post(auto&& t_handler) {
-    SVAROG_EXPECTS(t_handler != nullptr);  // Handler must be valid
-
     // Wrap handler in work_item (std::move_only_function<void()>)
     [[maybe_unused]] bool pushed =
         m_queue->push([handler = std::forward<decltype(t_handler)>(t_handler)]() mutable { handler(); });
@@ -87,8 +84,6 @@ void strand<Executor>::post(auto&& t_handler) {
 
 template <typename Executor>
 void strand<Executor>::dispatch(auto&& t_handler) {
-    SVAROG_EXPECTS(t_handler != nullptr);  // Handler must be valid
-
     if (running_in_this_thread()) {
         // We're already on the strand thread - execute immediately
         // Check recursion depth to prevent stack overflow

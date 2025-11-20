@@ -43,12 +43,10 @@ public:
     executor_type get_executor() noexcept;
 
     void post(auto&& t_handler) {
-        SVAROG_EXPECTS(t_handler != nullptr);
         [[maybe_unused]] bool pushed = m_handlers.push(std::forward<decltype(t_handler)>(t_handler));
     }
 
     void dispatch(auto&& t_handler) {
-        SVAROG_EXPECTS(t_handler != nullptr);
         if (running_in_this_thread()) {
             SVAROG_EXPECTS(!stopped());
             t_handler();

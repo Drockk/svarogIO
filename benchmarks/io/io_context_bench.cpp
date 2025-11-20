@@ -24,7 +24,6 @@ TEST_CASE("io_context: post throughput - 1 worker", "[io_context][bench][through
         }
 
         latch_ptr->wait();
-        return latch_ptr;
     };
 
     guard.reset();
@@ -48,7 +47,6 @@ TEST_CASE("io_context: post throughput - 4 workers", "[io_context][bench][throug
         }
 
         latch_ptr->wait();
-        return latch_ptr;
     };
 
     guard.reset();

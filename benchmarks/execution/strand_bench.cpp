@@ -1,5 +1,6 @@
 #include <atomic>
 #include <chrono>
+#include <future>
 #include <memory>
 #include <thread>
 #include <vector>
@@ -63,23 +64,28 @@ TEST_CASE("strand: dispatch vs post latency", "[strand][bench][latency]") {
     thread_pool pool(1);
     strand<io_context::executor_type> s(pool.get_executor());
 
-    SECTION("post latency (always defers)") {
-        std::atomic<int> counter{0};
+    // Give thread pool time to start
+    std::this_thread::sleep_for(10ms);
 
+    SECTION("post latency (always defers)") {
         BENCHMARK("post latency") {
-            s.post([&] { counter++; });
-            while (counter.load() == 0) {
-                std::this_thread::yield();
-            }
-            counter = 0;
+            std::promise<void> done;
+            auto future = done.get_future();
+
+            s.post([&] { done.set_value(); });
+
+            future.wait();
         };
     }
 
     SECTION("dispatch latency (immediate when on strand)") {
-        std::atomic<bool> ready{false};
+        std::promise<void> ready_promise;
+        std::promise<void> done_promise;
+        auto ready_future = ready_promise.get_future();
+        auto done_future = done_promise.get_future();
 
         s.post([&] {
-            ready = true;
+            ready_promise.set_value();
 
             // Now we're on strand thread
             BENCHMARK("dispatch immediate") {
@@ -87,11 +93,17 @@ TEST_CASE("strand: dispatch vs post latency", "[strand][bench][latency]") {
                 s.dispatch([&] { result = 42; });
                 return result;
             };
+
+            done_promise.set_value();
         });
 
-        while (!ready) {
-            std::this_thread::yield();
-        }
+        // Wait for benchmark to start
+        ready_future.wait();
+
+        // Wait for benchmark to complete
+        done_future.wait();
+
+        // Give extra time for cleanup
         std::this_thread::sleep_for(100ms);
     }
 

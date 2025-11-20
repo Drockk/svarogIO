@@ -23,6 +23,11 @@ add_svarog_test(execution/coroutine_tests.cpp)
 add_svarog_test(io/io_context_tests.cpp)
 
 # ============================================================================
+# Integration Tests
+# ============================================================================
+add_svarog_test(integration/phase1_integration_tests.cpp)
+
+# ============================================================================
 # Future: Add more test modules here
 # ============================================================================
 # add_svarog_test(network/socket_tests.cpp)

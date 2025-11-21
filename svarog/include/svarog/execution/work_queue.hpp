@@ -1,11 +1,11 @@
 #pragma once
 
-#include <atomic>
-#include <cstddef>     // size_t
-#include <functional>  // std::move_only_function
-#include <memory>      // std::unique_ptr
-
-#include "svarog/core/contracts.hpp"
+#include <cstddef>
+#include <deque>
+#include <functional>
+#include <list>
+#include <memory>
+#include <queue>
 
 // Use std::expected if available (C++23), otherwise use tl::expected (backport)
 #if __cpp_lib_expected >= 202202L
@@ -30,7 +30,22 @@ namespace svarog::execution {
 
 using work_item = std::move_only_function<void()>;
 
-enum class queue_error {
+template <typename Container>
+concept WorkQueueContainer = requires(Container t_container) {
+    typename Container::value_type;
+    { t_container.push_back(std::declval<typename Container::value_type>()) } -> std::same_as<void>;
+    { t_container.front() } -> std::same_as<typename Container::value_type&>;
+    { t_container.pop_front() } -> std::same_as<void>;
+    { t_container.empty() } -> std::convertible_to<bool>;
+    { t_container.size() } -> std::convertible_to<std::size_t>;
+};
+
+static_assert(WorkQueueContainer<std::deque<work_item>>);
+static_assert(WorkQueueContainer<std::list<work_item>>);
+static_assert(!WorkQueueContainer<std::queue<work_item>>);
+static_assert(!WorkQueueContainer<std::vector<work_item>>);
+
+enum class queue_error : std::uint8_t {
     empty,
     stopped
 };

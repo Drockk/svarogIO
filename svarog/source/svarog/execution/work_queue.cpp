@@ -111,7 +111,11 @@ namespace svarog::execution {
 work_queue::work_queue() : m_impl(std::make_unique<work_queue_impl>()) {
 }
 
-work_queue::~work_queue() = default;
+work_queue::~work_queue() {
+    if (m_impl) {
+        m_impl->stop();
+    }
+}
 
 bool work_queue::push(work_item&& t_item) {
     SVAROG_EXPECTS(t_item != nullptr);

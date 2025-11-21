@@ -1,11 +1,13 @@
 #pragma once
 
 #include <cstddef>
+#include <cstdint>
 #include <deque>
 #include <functional>
 #include <list>
 #include <memory>
 #include <queue>
+#include <vector>
 
 // Use std::expected if available (C++23), otherwise use tl::expected (backport)
 #if __cpp_lib_expected >= 202202L

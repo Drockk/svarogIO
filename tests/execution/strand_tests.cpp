@@ -240,11 +240,14 @@ TEST_CASE("strand: recursion depth limit", "[strand][recursion]") {
     // Test that deep recursion is handled gracefully
     // We'll post a task that dispatches itself recursively
     auto recursive_task = std::make_shared<std::function<void(int)>>();
-    *recursive_task = [&, recursive_task](int depth) {
+    std::weak_ptr<std::function<void(int)>> weak_task = recursive_task;
+    *recursive_task = [&, weak_task](int depth) {
         call_count++;
 
         if (depth < 150) {  // Try to recurse deeply
-            s.dispatch([recursive_task, depth] { (*recursive_task)(depth + 1); });
+            if (auto task = weak_task.lock()) {
+                s.dispatch([task, depth] { (*task)(depth + 1); });
+            }
         } else {
             exceeded_limit = true;
         }

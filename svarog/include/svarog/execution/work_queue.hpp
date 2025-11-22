@@ -97,18 +97,18 @@ public:
         return item;
     }
 
-    [[nodiscard]] expected<work_item, queue_error> pop(std::function<bool()> t_stop_predicate) noexcept {
+    [[nodiscard]] expected<work_item, queue_error> pop(std::move_only_function<bool()> t_stop_predicate) noexcept {
         std::unique_lock lock(m_mutex);
 
         m_cv.wait(lock,
                   [this, &t_stop_predicate] { return !m_queue.empty() || m_stopped.load() || t_stop_predicate(); });
 
         if (m_stopped.load()) {
-            return unexpected(queue_error::stopped);
+            return unexpected{queue_error::stopped};
         }
 
         if (m_queue.empty()) {
-            return unexpected(queue_error::empty);
+            return unexpected{queue_error::empty};
         }
 
         auto item = std::move(m_queue.front());
@@ -120,7 +120,7 @@ public:
         const std::lock_guard guard(m_mutex);
 
         if (m_queue.empty()) {
-            return unexpected(m_stopped.load() ? queue_error::stopped : queue_error::empty);
+            return unexpected{m_stopped.load() ? queue_error::stopped : queue_error::empty};
         }
 
         auto item = std::move(m_queue.front());

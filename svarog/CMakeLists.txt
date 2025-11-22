@@ -7,7 +7,6 @@ target_sources(
     "source/svarog/execution/execution_context.cpp"
     "source/svarog/execution/strand.cpp"
     "source/svarog/execution/thread_pool.cpp"
-    "source/svarog/execution/work_queue.cpp"
     "source/svarog/execution/work_guard.cpp"
     "source/svarog/io/io_context.cpp"
     "source/svarog/ip/ip_address.cpp"

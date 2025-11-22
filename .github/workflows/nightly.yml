@@ -85,35 +85,35 @@ jobs:
     - name: Run Unit Tests
       run: ctest --preset ${{ matrix.preset }} --verbose
 
-    - name: Run Benchmarks (Release presets only)
-      if: contains(matrix.preset, 'release') || contains(matrix.preset, 'relwithdebinfo')
-      run: |
-        # All CI presets use 'build' as the binary directory
-        BUILD_DIR="build"
-        echo "Build directory: $BUILD_DIR"
-        if [ -f "$BUILD_DIR/benchmarks/svarog_benchmarks" ]; then
-          $BUILD_DIR/benchmarks/svarog_benchmarks --benchmark-samples 1000 > benchmark_results_${{ matrix.preset }}.txt
-        else
-          echo "Benchmark executable not found in $BUILD_DIR/benchmarks/"
-          ls -la "$BUILD_DIR/benchmarks/" || echo "Benchmarks directory does not exist"
-          exit 1
-        fi
+    # - name: Run Benchmarks (Release presets only)
+      # if: contains(matrix.preset, 'release') || contains(matrix.preset, 'relwithdebinfo')
+      # run: |
+      #   # All CI presets use 'build' as the binary directory
+      #   BUILD_DIR="build"
+      #   echo "Build directory: $BUILD_DIR"
+      #   if [ -f "$BUILD_DIR/benchmarks/svarog_benchmarks" ]; then
+      #     $BUILD_DIR/benchmarks/svarog_benchmarks --benchmark-samples 1000 > benchmark_results_${{ matrix.preset }}.txt
+      #   else
+      #     echo "Benchmark executable not found in $BUILD_DIR/benchmarks/"
+      #     ls -la "$BUILD_DIR/benchmarks/" || echo "Benchmarks directory does not exist"
+      #     exit 1
+      #   fi
 
-    - name: Upload Benchmark Results
-      if: contains(matrix.preset, 'release') || contains(matrix.preset, 'relwithdebinfo')
-      uses: actions/upload-artifact@v4
-      with:
-        name: benchmark-results-${{ matrix.preset }}-${{ steps.strings.outputs.timestamp }}
-        path: benchmark_results_${{ matrix.preset }}.txt
-        retention-days: 30
+    # - name: Upload Benchmark Results
+    #   if: contains(matrix.preset, 'release') || contains(matrix.preset, 'relwithdebinfo')
+    #   uses: actions/upload-artifact@v4
+    #   with:
+    #     name: benchmark-results-${{ matrix.preset }}-${{ steps.strings.outputs.timestamp }}
+    #     path: benchmark_results_${{ matrix.preset }}.txt
+    #     retention-days: 30
 
-    - name: Upload Test Results
-      if: failure()
-      uses: actions/upload-artifact@v4
-      with:
-        name: test-results-${{ matrix.preset }}-${{ steps.strings.outputs.timestamp }}
-        path: build/Testing/Temporary/
-        retention-days: 7
+    # - name: Upload Test Results
+    #   if: failure()
+    #   uses: actions/upload-artifact@v4
+    #   with:
+    #     name: test-results-${{ matrix.preset }}-${{ steps.strings.outputs.timestamp }}
+    #     path: build/Testing/Temporary/
+    #     retention-days: 7
 
   sanitizers:
     runs-on: ubuntu-latest

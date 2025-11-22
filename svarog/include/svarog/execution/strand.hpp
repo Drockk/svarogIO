@@ -37,7 +37,7 @@ private:
 
     Executor m_executor;
 
-    std::unique_ptr<work_queue> m_queue;
+    std::unique_ptr<work_queue<>> m_queue;
 
     std::atomic<bool> m_executing{false};
 
@@ -52,7 +52,7 @@ thread_local std::size_t strand<Executor>::s_execution_depth = 0;
 
 template <typename Executor>
 strand<Executor>::strand(executor_type t_executor)
-    : m_executor(std::move(t_executor)), m_queue(std::make_unique<work_queue>()) {
+    : m_executor(std::move(t_executor)), m_queue(std::make_unique<work_queue<>>()) {
 }
 
 template <typename Executor>

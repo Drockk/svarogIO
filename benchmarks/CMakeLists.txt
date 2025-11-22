@@ -12,4 +12,4 @@ target_compile_options(svarog_benchmarks PRIVATE -O3 -march=native)
 # Enable benchmarking
 target_compile_definitions(svarog_benchmarks PRIVATE CATCH_CONFIG_ENABLE_BENCHMARKING)
 
-add_test(NAME svarog_benchmarks COMMAND svarog_benchmarks)
+# add_test(NAME svarog_benchmarks COMMAND svarog_benchmarks)

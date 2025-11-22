@@ -1,13 +1,17 @@
 #pragma once
 
+#include <atomic>
+#include <condition_variable>
 #include <cstddef>
 #include <cstdint>
 #include <deque>
 #include <functional>
 #include <list>
-#include <memory>
+#include <mutex>
 #include <queue>
 #include <vector>
+
+#include "svarog/core/contracts.hpp"
 
 // Use std::expected if available (C++23), otherwise use tl::expected (backport)
 #if __cpp_lib_expected >= 202202L
@@ -25,8 +29,6 @@ using expected = tl::expected<T, E>;
 using tl::unexpected;
 }  // namespace svarog::execution
 #endif
-
-class work_queue_impl;
 
 namespace svarog::execution {
 
@@ -52,31 +54,113 @@ enum class queue_error : std::uint8_t {
     stopped
 };
 
+template <WorkQueueContainer Container = std::deque<work_item>>
 class work_queue {
 public:
-    explicit work_queue();
-    ~work_queue();
+    work_queue() = default;
+
+    ~work_queue() {
+        stop();
+    }
 
     work_queue(const work_queue&) = delete;
     work_queue& operator=(const work_queue&) = delete;
     work_queue(work_queue&&) = delete;
     work_queue& operator=(work_queue&&) = delete;
 
-    [[nodiscard]] bool push(work_item&& t_item);
+    [[nodiscard]] bool push(work_item&& t_item) {
+        SVAROG_EXPECTS(t_item != nullptr);
 
-    [[nodiscard]] expected<work_item, queue_error> pop() noexcept;
-    [[nodiscard]] expected<work_item, queue_error> pop(std::function<bool()> t_stop_predicate) noexcept;
-    [[nodiscard]] expected<work_item, queue_error> try_pop() noexcept;
+        const std::lock_guard guard(m_mutex);
 
-    [[nodiscard]] size_t size() const noexcept;
-    [[nodiscard]] bool empty() const noexcept;
-    void stop() noexcept;
-    [[nodiscard]] bool stopped() const noexcept;
-    void clear() noexcept;
-    void notify_all() noexcept;
+        if (m_stopped.load()) {
+            return false;
+        }
+
+        m_queue.push_back(std::move(t_item));
+        m_cv.notify_one();
+
+        return true;
+    }
+
+    [[nodiscard]] expected<work_item, queue_error> pop() noexcept {
+        std::unique_lock lock(m_mutex);
+
+        m_cv.wait(lock, [this] { return !m_queue.empty() || m_stopped.load(); });
+
+        if (m_stopped.load()) {
+            return unexpected{queue_error::stopped};
+        }
+
+        auto item = std::move(m_queue.front());
+        m_queue.pop_front();
+        return item;
+    }
+
+    [[nodiscard]] expected<work_item, queue_error> pop(std::function<bool()> t_stop_predicate) noexcept {
+        std::unique_lock lock(m_mutex);
+
+        m_cv.wait(lock,
+                  [this, &t_stop_predicate] { return !m_queue.empty() || m_stopped.load() || t_stop_predicate(); });
+
+        if (m_stopped.load()) {
+            return unexpected(queue_error::stopped);
+        }
+
+        if (m_queue.empty()) {
+            return unexpected(queue_error::empty);
+        }
+
+        auto item = std::move(m_queue.front());
+        m_queue.pop_front();
+        return item;
+    }
+
+    [[nodiscard]] expected<work_item, queue_error> try_pop() noexcept {
+        const std::lock_guard guard(m_mutex);
+
+        if (m_queue.empty()) {
+            return unexpected(m_stopped.load() ? queue_error::stopped : queue_error::empty);
+        }
+
+        auto item = std::move(m_queue.front());
+        m_queue.pop_front();
+        return item;
+    }
+
+    [[nodiscard]] size_t size() const noexcept {
+        std::lock_guard _(m_mutex);
+        return m_queue.size();
+    }
+
+    [[nodiscard]] bool empty() const noexcept {
+        std::lock_guard _(m_mutex);
+        return m_queue.empty();
+    }
+
+    void stop() noexcept {
+        m_stopped.store(true);
+        m_cv.notify_all();
+    }
+
+    [[nodiscard]] bool stopped() const noexcept {
+        return m_stopped.load();
+    }
+
+    void clear() noexcept {
+        std::lock_guard _(m_mutex);
+        m_queue.clear();
+    }
+
+    void notify_all() noexcept {
+        m_cv.notify_all();
+    }
 
 private:
-    std::unique_ptr<work_queue_impl> m_impl;
+    std::atomic<bool> m_stopped{false};
+    std::condition_variable m_cv;
+    Container m_queue;
+    mutable std::mutex m_mutex;
 };
 
 }  // namespace svarog::execution

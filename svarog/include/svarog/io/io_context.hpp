@@ -61,7 +61,7 @@ public:
 
 private:
     std::atomic<bool> m_stopped{false};
-    execution::work_queue m_handlers;
+    execution::work_queue<> m_handlers;
     std::atomic<size_t> m_work_count{0};
     inline static thread_local io_context* current_context_ = nullptr;
 

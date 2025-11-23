@@ -1,23 +1,24 @@
 #pragma once
 
-#include <any>
 #include <functional>
 #include <memory>
 #include <mutex>
-#include <ranges>
 #include <typeindex>
 #include <vector>
 
 #include "svarog/core/contracts.hpp"
 
+#include <any>
+#include <ranges>
+
 #if __cpp_lib_flat_map >= 202207L
     #include <flat_map>
-    template <typename K, typename V>
-    using default_service_map = std::flat_map<K, V>;
+template <typename K, typename V>
+using default_service_map = std::flat_map<K, V>;
 #else
     #include <unordered_map>
-    template <typename K, typename V>
-    using default_service_map = std::unordered_map<K, V>;
+template <typename K, typename V>
+using default_service_map = std::unordered_map<K, V>;
 #endif
 
 namespace svarog::execution {
@@ -37,7 +38,7 @@ concept ServiceContainer = requires(Container t_container, std::type_index t_key
     { t_container.erase(t_key) };
 };
 
-template<ServiceContainer Container = default_service_map<std::type_index, std::shared_ptr<void>>>
+template <ServiceContainer Container = default_service_map<std::type_index, std::shared_ptr<void>>>
 class execution_context {
 public:
     execution_context() = default;

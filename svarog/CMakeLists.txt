@@ -4,7 +4,6 @@ target_sources(
   "svarog"
   PRIVATE
     "source/svarog/execution/co_spawn.cpp"
-    "source/svarog/execution/execution_context.cpp"
     "source/svarog/execution/strand.cpp"
     "source/svarog/execution/thread_pool.cpp"
     "source/svarog/execution/work_guard.cpp"

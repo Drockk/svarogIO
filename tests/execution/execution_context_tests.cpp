@@ -6,7 +6,7 @@
 #include <svarog/execution/execution_context.hpp>
 
 // Mock execution_context for testing (cannot instantiate abstract class)
-class mock_execution_context : public svarog::execution::execution_context {
+class mock_execution_context : public svarog::execution::execution_context<> {
 public:
     void stop() override {
         stopped_ = true;

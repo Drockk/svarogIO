@@ -15,7 +15,7 @@ struct schedule_operation;
 
 namespace svarog::io {
 
-class io_context : public execution::execution_context {
+class io_context : public execution::execution_context<> {
 public:
     class executor_type {
     public:

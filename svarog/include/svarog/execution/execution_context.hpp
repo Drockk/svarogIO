@@ -4,10 +4,22 @@
 #include <memory>
 #include <mutex>
 #include <typeindex>
-#include <unordered_map>
 #include <vector>
 
 #include "svarog/core/contracts.hpp"
+
+#include <any>
+#include <ranges>
+
+#if __cpp_lib_flat_map >= 202207L
+    #include <flat_map>
+template <typename K, typename V>
+using default_service_map = std::flat_map<K, V>;
+#else
+    #include <unordered_map>
+template <typename K, typename V>
+using default_service_map = std::unordered_map<K, V>;
+#endif
 
 namespace svarog::execution {
 
@@ -16,10 +28,27 @@ concept HasShutdownHook = requires(T t) {
     { t.on_shutdown() } -> std::same_as<void>;
 };
 
+template <typename Container>
+concept ServiceContainer = requires(Container t_container, std::type_index t_key, std::any t_value) {
+    typename Container::key_type;
+    typename Container::mapped_type;
+    { t_container.find(t_key) };
+    { t_container.insert_or_assign(t_key, t_value) };
+    { t_container.contains(t_key) } -> std::convertible_to<bool>;
+    { t_container.erase(t_key) };
+};
+
+template <ServiceContainer Container = default_service_map<std::type_index, std::shared_ptr<void>>>
 class execution_context {
 public:
     execution_context() = default;
-    virtual ~execution_context();
+    virtual ~execution_context() {
+        // Execute cleanup callbacks in reverse order using ranges::reverse_view
+        // This ensures proper shutdown hook calls and destruction order
+        for (auto& cleanup : std::ranges::reverse_view(m_cleanup_callbacks)) {
+            cleanup();
+        }
+    }
 
     execution_context(const execution_context&) = delete;
     execution_context& operator=(const execution_context&) = delete;
@@ -118,7 +147,7 @@ public:
 
 private:
     mutable std::mutex m_service_registry_mutex;
-    std::unordered_map<std::type_index, std::shared_ptr<void>> m_service_registry;
+    Container m_service_registry;
     std::vector<std::move_only_function<void()>> m_cleanup_callbacks;
 };
 

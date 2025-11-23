@@ -39,7 +39,7 @@ public:
     }
 };
 
-class CustomContext : public execution::execution_context {
+class CustomContext : public execution::execution_context<> {
 public:
     CustomContext() {
         std::cout << "[Context] Created" << std::endl;

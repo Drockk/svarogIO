@@ -5,7 +5,6 @@
 #include <thread>
 #include <vector>
 
-#include "svarog/execution/execution_context.hpp"
 #include "svarog/execution/strand.hpp"
 #include "svarog/execution/thread_pool.hpp"
 #include "svarog/execution/work_queue.hpp"
@@ -16,57 +15,6 @@
 using namespace svarog::execution;
 using namespace svarog::io;
 using namespace std::chrono_literals;
-
-// ============================================================================
-// Service Registry Integration Tests
-// ============================================================================
-
-TEST_CASE("integration: execution_context service registry", "[integration][services]") {
-    SECTION("multiple services in same context") {
-        io_context ctx;
-
-        // Create and register multiple services
-        auto& service1 = ctx.use_or_make_service<int>(42);
-        auto& service2 = ctx.use_or_make_service<std::string>("test");
-        auto& service3 = ctx.use_or_make_service<double>(3.14);
-
-        // Verify all services are accessible
-        REQUIRE(&ctx.use_service<int>() == &service1);
-        REQUIRE(&ctx.use_service<std::string>() == &service2);
-        REQUIRE(&ctx.use_service<double>() == &service3);
-
-        // Verify values
-        REQUIRE(ctx.use_service<int>() == 42);
-        REQUIRE(ctx.use_service<std::string>() == "test");
-        REQUIRE(ctx.use_service<double>() == 3.14);
-
-        // Services persist across calls
-        auto& service1_again = ctx.use_service<int>();
-        REQUIRE(&service1_again == &service1);
-    }
-
-    SECTION("service access is thread-safe") {
-        io_context ctx;
-        std::atomic<int> access_count{0};
-
-        std::vector<std::thread> threads;
-        for (int i = 0; i < 10; ++i) {
-            threads.emplace_back([&] {
-                auto& service = ctx.use_or_make_service<int>(0);
-                (void)service;
-                access_count++;
-            });
-        }
-
-        for (auto& t : threads) {
-            t.join();
-        }
-
-        REQUIRE(access_count == 10);
-        // All threads should get the same service instance
-        REQUIRE(ctx.has_service<int>());
-    }
-}
 
 // ============================================================================
 // io_context + work_queue Integration Tests

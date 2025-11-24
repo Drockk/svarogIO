@@ -10,34 +10,15 @@ cmake --preset=release
 cmake --build --preset=release
 
 # Run all examples
-./build/release/examples/execution_context_example/execution_context_example
 ./build/release/examples/work_queue_example/work_queue_example
 ./build/release/examples/work_guard_example/work_guard_example
 ./build/release/examples/io_context_example/io_context_example
 ./build/release/examples/thread_pool_example/thread_pool_example
-./build/release/examples/simple_coroutine/simple_coroutine
 ```
 
 ## Examples Overview
 
-### 1. execution_context_example
-**File**: `execution_context/main.cpp`
-
-Demonstrates the service registry pattern:
-- Adding services with `add_service()`
-- Creating services with `make_service()`
-- Accessing services with `use_service()`
-- Lazy initialization with `use_or_make_service()`
-- Service shutdown hooks
-- Service lifecycle management
-
-**Key Concepts**:
-- Type-safe service registry
-- Automatic shutdown hook invocation
-- Thread-safe service access
-- RAII resource management
-
-### 2. work_queue_example
+### 1. work_queue_example
 **File**: `work_queue/main.cpp`
 
 Demonstrates thread-safe MPMC queue:
@@ -53,7 +34,7 @@ Demonstrates thread-safe MPMC queue:
 - Producer-consumer patterns
 - Graceful shutdown
 
-### 3. work_guard_example
+### 2. work_guard_example
 **File**: `work_guard/main.cpp`
 
 Demonstrates RAII lifetime management:
@@ -69,7 +50,7 @@ Demonstrates RAII lifetime management:
 - Work count tracking
 - Move-only semantics
 
-### 4. io_context_example
+### 3. io_context_example
 **File**: `io_context/main.cpp`
 
 Demonstrates event loop and async execution:
@@ -86,7 +67,7 @@ Demonstrates event loop and async execution:
 - Immediate vs deferred execution
 - Multi-threaded event processing
 
-### 5. thread_pool_example
+### 4. thread_pool_example
 **File**: `thread_pool/main.cpp`
 
 Demonstrates RAII thread pool management:
@@ -103,35 +84,13 @@ Demonstrates RAII thread pool management:
 - Resource cleanup
 - Parallel task execution
 
-### 6. simple_coroutine
-**File**: `simple_coroutine/main.cpp`
-
-Demonstrates C++20 coroutines integration:
-- `awaitable_task<T>` coroutine type
-- `co_await ctx.schedule()` suspension
-- `co_spawn()` for launching coroutines
-- Nested coroutine calls
-- Return value propagation
-
-**Key Concepts**:
-- C++20 coroutines
-- Async/await pattern
-- Coroutine composition
-- Zero-cost abstraction
-
 ## Architecture Overview
 
 ```
-execution_context (base)
-    ├── Service Registry
-    └── io_context (derived)
-            ├── work_queue (internal)
-            ├── Executor API
-            ├── Coroutine Support
-            │   ├── schedule() awaiter
-            │   ├── awaitable_task<T>
-            │   └── co_spawn()
-            └── work_guard (lifetime)
+io_context (event loop)
+    ├── work_queue (internal)
+    ├── Executor API
+    └── work_guard (lifetime helpers)
 
 thread_pool (wrapper)
     └── io_context + std::jthread
@@ -140,32 +99,21 @@ thread_pool (wrapper)
 ## Design Patterns
 
 ### 1. RAII Pattern
-All components use RAII for resource management:
-- `execution_context` - Service lifecycle
+Core components use RAII for resource management:
 - `work_guard` - Work count management
 - `thread_pool` - Thread lifetime
-- `awaitable_task<T>` - Coroutine handle
+- `io_context` - Queue ownership and stop/reset semantics
 
-### 2. Service Registry Pattern
-```cpp
-execution_context ctx;
-auto& service = ctx.make_service<MyService>(args...);
-auto& existing = ctx.use_service<MyService>();
-```
-
-### 3. Executor Pattern
+### 2. Executor Pattern
 ```cpp
 auto executor = ctx.get_executor();
 executor.execute([]{  });
 ```
 
-### 4. Async/Await Pattern
+### 3. Thread Pool Pattern
 ```cpp
-auto task() -> awaitable_task<int> {
-    co_await ctx.schedule();
-    co_return 42;
-}
-co_spawn(ctx, task(), detached);
+execution::thread_pool pool(4);
+pool.post([]{ /* work */ });
 ```
 
 ## Performance Characteristics
@@ -216,17 +164,6 @@ pool.stop();
 pool.wait();
 ```
 
-### Pattern 3: Coroutine Async Operations
-```cpp
-auto async_operation() -> awaitable_task<Result> {
-    co_await ctx.schedule();  // Switch to io_context
-    Result r = compute();
-    co_return r;
-}
-
-co_spawn(ctx, async_operation(), detached);
-```
-
 ## Error Handling
 
 All components use modern C++ error handling:
@@ -239,19 +176,16 @@ All components use modern C++ error handling:
 
 | Component | Thread Safety |
 |-----------|---------------|
-| `execution_context` | All methods thread-safe |
 | `work_queue` | MPMC safe |
 | `io_context` | All methods thread-safe |
 | `work_guard` | Constructor/destructor NOT thread-safe, methods are |
 | `thread_pool` | All methods thread-safe |
-| `awaitable_task<T>` | Single-threaded ownership |
 
 ## Next Steps
 
 1. Read the [Phase 1 Tasks](../docs/PHASE_1_TASKS.md) for implementation details
-2. See [Coroutine Examples](../docs/COROUTINE_EXAMPLES.md) for advanced patterns
-3. Check [Unit Test Scenarios](../docs/UNIT_TEST_SCENARIOS.md) for usage patterns
-4. Review benchmarks in `benchmarks/` for performance characteristics
+2. Check [Unit Test Scenarios](../docs/UNIT_TEST_SCENARIOS.md) for usage patterns
+3. Review benchmarks in `benchmarks/` for performance characteristics
 
 ## License
 

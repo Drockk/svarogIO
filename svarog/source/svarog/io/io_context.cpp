@@ -5,7 +5,6 @@
 #include <functional>
 #include <utility>
 
-#include "svarog/execution/co_spawn.hpp"
 #include "svarog/execution/work_queue.hpp"
 
 namespace svarog::io {
@@ -17,8 +16,7 @@ io_context::io_context([[maybe_unused]] size_t t_concurrency_hint) {
 }
 
 void io_context::run() {
-    current_context_ = this;
-    execution::this_coro::current_context_ = this;
+    s_current_context = this;
 
     while (!stopped()) {
         // If we have work guards, we block waiting for work or notification
@@ -46,8 +44,7 @@ void io_context::run() {
         }
     }
 
-    current_context_ = nullptr;
-    execution::this_coro::current_context_ = nullptr;
+    s_current_context = nullptr;
 }
 
 size_t io_context::run_one() {
@@ -89,11 +86,7 @@ io_context& io_context::executor_type::context() const noexcept {
 }
 
 bool io_context::running_in_this_thread() const noexcept {
-    return current_context_ == this;
-}
-
-execution::schedule_operation io_context::schedule() noexcept {
-    return execution::schedule_operation{this};
+    return s_current_context == this;
 }
 
 }  // namespace svarog::io

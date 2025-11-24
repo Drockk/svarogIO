@@ -11,6 +11,8 @@ Transformation of the current C++20 coroutine-based task system into a full-fled
 - ✅ Prepare for integration with UDP/TCP sockets
 - ✅ Leverage new C++23 features
 
+> **Simplification notice (Nov 2025):** the service registry (`execution_context`) and coroutine helpers mentioned throughout this plan were intentionally removed to keep svarogIO minimal. Sections describing those components remain for historical context only.
+
 ## 🎯 Phased Approach
 
 ### Phase 1: Foundation (CURRENT - In Progress)

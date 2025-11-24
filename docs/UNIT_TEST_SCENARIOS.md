@@ -7,6 +7,8 @@
 **Standard:** C++23  
 **Date:** 2025-11-10
 
+> **Status update (Nov 2025):** Service registry and coroutine-focused scenarios documented below describe legacy behavior. The current codebase has removed those features; keep the scenarios for historical reference when interpreting coverage tables.
+
 ### Catch2 v3 Setup
 
 **CMakeLists.txt:**

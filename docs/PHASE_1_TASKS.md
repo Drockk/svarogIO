@@ -3,6 +3,8 @@
 ## Overview
 Phase 1 focuses on implementing the core execution infrastructure of svarogIO: `execution_context`, `work_queue`, `io_context`, and `strand`. This phase establishes the foundation for all asynchronous operations.
 
+> **November 2025 update:** the service registry (`execution_context`) and coroutine helpers referenced throughout this document were intentionally removed during the KIFS simplification. The historical notes below are retained for context but no longer describe the active code.
+
 **Duration**: 4-6 weeks
 **Priority**: Critical Path
 **Dependencies**: None (starting point)

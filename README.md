@@ -4,6 +4,8 @@
 
 A modern, high-performance C++23 asynchronous I/O library inspired by Boost.Asio.
 
+> **Note:** As of November 2025 the codebase was simplified around `io_context`, `work_queue`, and `thread_pool`. Template-based service registries and coroutine helpers (`awaitable_task`, `co_spawn`, `execution_context`) were removed to keep the API minimal.
+
 ## Features
 
 - **C++23 Standard**: Leveraging modern C++ features for better performance and safety

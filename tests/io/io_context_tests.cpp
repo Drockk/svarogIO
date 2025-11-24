@@ -1,4 +1,3 @@
-#include <algorithm>
 #include <chrono>
 #include <set>
 #include <thread>
@@ -80,6 +79,7 @@ TEST_CASE("io_context: multiple worker threads", "[io_context][threading]") {
 
     // Start workers FIRST
     std::vector<std::jthread> workers;
+    workers.reserve(num_workers);
     for (int w = 0; w < num_workers; ++w) {
         workers.emplace_back([&]() { io_context.run(); });
     }
@@ -114,51 +114,3 @@ TEST_CASE("io_context: multiple worker threads", "[io_context][threading]") {
     REQUIRE(completed.load() == num_tasks);
     REQUIRE(thread_ids.size() > 1);
 }
-
-// TEST_CASE("io_context: co_spawn coroutine", "[io_context][coroutine]") {
-//     svarog::io::io_context io_context;
-//     auto exec = io_context.get_executor();
-
-//     bool resumed_on_context = false;
-
-//     auto coro = [&]() -> svarog::execution::awaitable_task<void> {
-//         REQUIRE(svarog::execution::this_coro::executor() == exec);
-//         co_await io_context.schedule();
-//         resumed_on_context = svarog::execution::this_coro::running_in_io_context();
-//         co_return;
-//     };
-
-//     svarog::execution::co_spawn(io_context, coro(), svarog::execution::detached);
-
-//     io_context.run();
-
-//     REQUIRE(resumed_on_context);
-// }
-
-// TEST_CASE("io_context: coroutine cancellation", "[io_context][coroutine][cancel]") {
-//     svarog::io::io_context io_context;
-
-//     std::optional<std::error_code> completion_error;
-
-//     auto long_running = [&]() -> svarog::execution::awaitable_task<void> {
-//         for (int i = 0; i < 10; ++i) {
-//             co_await io_ctx.schedule();
-//             co_await svarog::execution::this_coro::check_cancellation();
-//         }
-//         throw std::runtime_error("boom");
-//     };
-
-//     svarog::execution::co_spawn(
-//         io_context, long_running(),
-//         svarog::execution::use_future([&completion_error](std::error_code ec) { completion_error = ec; }));
-
-//     std::jthread stopper([&]() {
-//         std::this_thread::sleep_for(1ms);
-//         io_context.stop();
-//     });
-
-//     io_context.run();
-
-//     REQUIRE(completion_error.has_value());
-//     REQUIRE(completion_error == svarog::execution::error::operation_aborted);
-// }

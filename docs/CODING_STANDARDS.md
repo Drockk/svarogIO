@@ -454,15 +454,13 @@ private:
 svarog/
 ├── include/svarog/
 │   ├── execution/
-│   │   ├── execution_context.hpp     # Public API
 │   │   └── io_context.hpp
 │   └── core/
 │       └── contracts.hpp              # Contract macros
 │
 └── source/svarog/
     └── execution/
-        ├── io_context.cpp             # Implementation
-        └── io_context_impl.hpp        # Pimpl (private header)
+        └── io_context.cpp             # Implementation
 ```
 
 ---

@@ -109,7 +109,9 @@ TEST_CASE("integration: io_context + strand", "[integration][io_context][strand]
         std::atomic<int> max_concurrent{0};
         std::atomic<int> current_concurrent{0};
 
-        for (int i = 0; i < 500; ++i) {
+        constexpr int num_tasks = 500;
+
+        for (int i = 0; i < num_tasks; ++i) {
             s.post([&] {
                 int current = ++current_concurrent;
                 int expected = max_concurrent.load();
@@ -123,10 +125,14 @@ TEST_CASE("integration: io_context + strand", "[integration][io_context][strand]
             });
         }
 
-        std::this_thread::sleep_for(200ms);
+        // Wait for completion
+        while (counter.load() < num_tasks) {
+            std::this_thread::sleep_for(1ms);
+        }
+
         pool.stop();
 
-        REQUIRE(counter == 500);
+        REQUIRE(counter == num_tasks);
         REQUIRE(max_concurrent == 1);  // Strand serialization verified
     }
 
@@ -140,19 +146,25 @@ TEST_CASE("integration: io_context + strand", "[integration][io_context][strand]
         std::atomic<int> counter2{0};
         std::atomic<int> counter3{0};
 
+        constexpr int num_tasks = 100;
+
         // Post to all strands
-        for (int i = 0; i < 100; ++i) {
+        for (int i = 0; i < num_tasks; ++i) {
             s1.post([&] { counter1++; });
             s2.post([&] { counter2++; });
             s3.post([&] { counter3++; });
         }
 
-        std::this_thread::sleep_for(100ms);
+        // Wait for completion
+        while (counter1.load() < num_tasks || counter2.load() < num_tasks || counter3.load() < num_tasks) {
+            std::this_thread::sleep_for(1ms);
+        }
+
         pool.stop();
 
-        REQUIRE(counter1 == 100);
-        REQUIRE(counter2 == 100);
-        REQUIRE(counter3 == 100);
+        REQUIRE(counter1 == num_tasks);
+        REQUIRE(counter2 == num_tasks);
+        REQUIRE(counter3 == num_tasks);
     }
 
     SECTION("concurrent run() with strands") {
@@ -162,16 +174,22 @@ TEST_CASE("integration: io_context + strand", "[integration][io_context][strand]
 
         std::atomic<int> total_executed{0};
 
+        constexpr int num_tasks = 1000;
+
         // Post lots of work
-        for (int i = 0; i < 1000; ++i) {
+        for (int i = 0; i < num_tasks; ++i) {
             s1.post([&] { total_executed++; });
             s2.post([&] { total_executed++; });
         }
 
-        std::this_thread::sleep_for(200ms);
+        // Wait for completion
+        while (total_executed.load() < num_tasks * 2) {
+            std::this_thread::sleep_for(1ms);
+        }
+
         pool.stop();
 
-        REQUIRE(total_executed == 2000);
+        REQUIRE(total_executed == num_tasks * 2);
     }
 }
 
@@ -192,8 +210,10 @@ TEST_CASE("integration: Phase 1 full integration", "[integration][full]") {
     std::atomic<int> s1_current{0};
     std::atomic<int> s2_current{0};
 
+    constexpr int num_tasks = 500;
+
     // Post work to both strands
-    for (int i = 0; i < 500; ++i) {
+    for (int i = 0; i < num_tasks; ++i) {
         s1.post([&] {
             int current = ++s1_current;
             int expected = s1_max_concurrent.load();
@@ -219,12 +239,16 @@ TEST_CASE("integration: Phase 1 full integration", "[integration][full]") {
         });
     }
 
-    std::this_thread::sleep_for(200ms);
+    // Wait for completion
+    while (s1_counter.load() < num_tasks || s2_counter.load() < num_tasks) {
+        std::this_thread::sleep_for(1ms);
+    }
+
     pool.stop();
 
     // Verify work completed
-    REQUIRE(s1_counter == 500);
-    REQUIRE(s2_counter == 500);
+    REQUIRE(s1_counter == num_tasks);
+    REQUIRE(s2_counter == num_tasks);
 
     // Verify serialization within each strand
     REQUIRE(s1_max_concurrent == 1);
@@ -274,7 +298,11 @@ TEST_CASE("integration: producer-consumer pattern", "[integration][patterns]") {
         });
     }
 
-    std::this_thread::sleep_for(300ms);
+    // Wait for completion
+    while (items_produced.load() < num_items || items_consumed.load() < num_items) {
+        std::this_thread::sleep_for(1ms);
+    }
+
     pool.stop();
 
     REQUIRE(items_produced == num_items);
@@ -317,7 +345,11 @@ TEST_CASE("integration: pipeline pattern", "[integration][patterns]") {
         });
     }
 
-    std::this_thread::sleep_for(200ms);
+    // Wait for completion
+    while (stage1_count.load() < num_items || stage2_count.load() < num_items || stage3_count.load() < num_items) {
+        std::this_thread::sleep_for(1ms);
+    }
+
     pool.stop();
 
     REQUIRE(stage1_count == num_items);
@@ -332,25 +364,36 @@ TEST_CASE("integration: task scheduler simulation", "[integration][patterns]") {
     std::atomic<int> immediate_tasks{0};
     std::atomic<int> delayed_tasks{0};
 
+    constexpr int num_tasks = 50;
+
     // Simulate immediate tasks
-    for (int i = 0; i < 50; ++i) {
+    for (int i = 0; i < num_tasks; ++i) {
         scheduler.post([&] { immediate_tasks++; });
+    }
+
+    // Wait for immediate tasks
+    while (immediate_tasks.load() < num_tasks) {
+        std::this_thread::sleep_for(1ms);
     }
 
     // Simulate delayed tasks (posted after a delay)
     std::thread delayer([&] {
-        std::this_thread::sleep_for(50ms);
-        for (int i = 0; i < 50; ++i) {
+        for (int i = 0; i < num_tasks; ++i) {
             scheduler.post([&] { delayed_tasks++; });
         }
     });
 
     delayer.join();
-    std::this_thread::sleep_for(100ms);
+
+    // Wait for delayed tasks
+    while (delayed_tasks.load() < num_tasks) {
+        std::this_thread::sleep_for(1ms);
+    }
+
     pool.stop();
 
-    REQUIRE(immediate_tasks == 50);
-    REQUIRE(delayed_tasks == 50);
+    REQUIRE(immediate_tasks == num_tasks);
+    REQUIRE(delayed_tasks == num_tasks);
 }
 
 TEST_CASE("integration: exception propagation across components", "[integration][exceptions]") {
@@ -370,7 +413,11 @@ TEST_CASE("integration: exception propagation across components", "[integration]
     s.post([&] { after_exception++; });
     s.post([&] { after_exception++; });
 
-    std::this_thread::sleep_for(50ms);
+    // Wait for completion
+    while (before_exception.load() < 2 || after_exception.load() < 2) {
+        std::this_thread::sleep_for(1ms);
+    }
+
     pool.stop();
 
     // Strand should continue after exception

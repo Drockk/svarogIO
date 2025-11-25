@@ -72,7 +72,9 @@ TEST_CASE("thread_pool: multi-threaded execution", "[thread_pool][threading]") {
     std::set<std::thread::id> thread_ids;
     std::mutex mtx;
 
-    for (int i = 0; i < 100; ++i) {
+    constexpr int num_tasks = 100;
+
+    for (int i = 0; i < num_tasks; ++i) {
         pool.post([&] {
             {
                 std::lock_guard lock(mtx);
@@ -84,10 +86,15 @@ TEST_CASE("thread_pool: multi-threaded execution", "[thread_pool][threading]") {
     }
 
     // Wait for all tasks to complete
-    while (counter.load(std::memory_order_acquire) < 100) {
+    while (counter.load(std::memory_order_acquire) < num_tasks) {
         std::this_thread::sleep_for(1ms);
     }
 
-    REQUIRE(counter == 100);
+    // Stop the pool before checking thread_ids
+    pool.stop();
+
+    // Now safe to access thread_ids - all workers are stopped
+    std::lock_guard lock(mtx);
+    REQUIRE(counter == num_tasks);
     REQUIRE(thread_ids.size() > 1);
 }

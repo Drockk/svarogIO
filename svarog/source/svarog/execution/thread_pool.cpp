@@ -49,5 +49,12 @@ void thread_pool::stop() noexcept {
     for (auto& thread : m_threads) {
         thread.request_stop();
     }
+
+    // Wait for all threads to finish
+    for (auto& thread : m_threads) {
+        if (thread.joinable()) {
+            thread.join();
+        }
+    }
 }
 }  // namespace svarog::execution

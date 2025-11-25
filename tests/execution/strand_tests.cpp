@@ -21,6 +21,7 @@ TEST_CASE("strand: serialization guarantee", "[strand][serialization]") {
         std::atomic<int> counter{0};
         std::atomic<int> max_concurrent{0};
         std::atomic<int> current_concurrent{0};
+        std::atomic<int> completed{0};
 
         constexpr int num_tasks = 1000;
 
@@ -39,10 +40,15 @@ TEST_CASE("strand: serialization guarantee", "[strand][serialization]") {
                 counter.store(old + 1);
 
                 --current_concurrent;
+                ++completed;
             });
         }
 
-        std::this_thread::sleep_for(200ms);
+        // Wait for all tasks to complete
+        while (completed.load() < num_tasks) {
+            std::this_thread::sleep_for(1ms);
+        }
+
         pool.stop();
 
         REQUIRE(counter == num_tasks);
@@ -58,6 +64,8 @@ TEST_CASE("strand: serialization guarantee", "[strand][serialization]") {
         std::atomic<int> s1_current{0};
         std::atomic<int> s2_max_concurrent{0};
         std::atomic<int> s2_current{0};
+        std::atomic<int> s1_completed{0};
+        std::atomic<int> s2_completed{0};
 
         constexpr int num_tasks = 100;
 
@@ -70,6 +78,7 @@ TEST_CASE("strand: serialization guarantee", "[strand][serialization]") {
                 }
                 std::this_thread::sleep_for(10us);
                 --s1_current;
+                ++s1_completed;
             });
 
             s2.post([&] {
@@ -79,10 +88,15 @@ TEST_CASE("strand: serialization guarantee", "[strand][serialization]") {
                 }
                 std::this_thread::sleep_for(10us);
                 --s2_current;
+                ++s2_completed;
             });
         }
 
-        std::this_thread::sleep_for(300ms);
+        // Wait for all tasks to complete
+        while (s1_completed.load() < num_tasks || s2_completed.load() < num_tasks) {
+            std::this_thread::sleep_for(1ms);
+        }
+
         pool.stop();
 
         // Each strand individually serialized
@@ -98,18 +112,25 @@ TEST_CASE("strand: FIFO ordering", "[strand][ordering]") {
     constexpr int num_tasks = 100;
     std::vector<int> execution_order;
     std::mutex order_mutex;
+    std::atomic<int> completed{0};
 
     // Post tasks in order
     for (int i = 0; i < num_tasks; ++i) {
         s.post([&, task_id = i] {
             std::lock_guard lock(order_mutex);
             execution_order.push_back(task_id);
+            ++completed;
         });
     }
 
-    std::this_thread::sleep_for(100ms);
+    // Wait for all tasks to complete
+    while (completed.load() < num_tasks) {
+        std::this_thread::sleep_for(1ms);
+    }
+
     pool.stop();
 
+    std::lock_guard lock(order_mutex);
     REQUIRE(execution_order.size() == num_tasks);
 
     // Verify FIFO order
@@ -141,7 +162,11 @@ TEST_CASE("strand: dispatch() immediate execution", "[strand][dispatch]") {
             test_complete = true;
         });
 
-        std::this_thread::sleep_for(50ms);
+        // Wait for completion
+        while (!test_complete.load()) {
+            std::this_thread::sleep_for(1ms);
+        }
+
         pool.stop();
 
         REQUIRE(test_complete == true);
@@ -167,7 +192,11 @@ TEST_CASE("strand: dispatch() immediate execution", "[strand][dispatch]") {
         std::this_thread::sleep_for(10ms);
         REQUIRE(execution_count <= 1);
 
-        std::this_thread::sleep_for(100ms);
+        // Wait for both tasks to complete
+        while (execution_count.load() < 2) {
+            std::this_thread::sleep_for(1ms);
+        }
+
         pool.stop();
 
         // Both should have executed eventually
@@ -187,6 +216,7 @@ TEST_CASE("strand: multi-threaded io_context", "[strand][multi-threading]") {
 
     // Post work to both strands from multiple threads
     std::vector<std::thread> posting_threads;
+    posting_threads.reserve(4);
     for (int t = 0; t < 4; ++t) {
         posting_threads.emplace_back([&] {
             for (int i = 0; i < num_tasks / 4; ++i) {
@@ -200,7 +230,11 @@ TEST_CASE("strand: multi-threaded io_context", "[strand][multi-threading]") {
         t.join();
     }
 
-    std::this_thread::sleep_for(200ms);
+    // Wait for all tasks to complete
+    while (s1_counter.load() < num_tasks || s2_counter.load() < num_tasks) {
+        std::this_thread::sleep_for(1ms);
+    }
+
     pool.stop();
 
     REQUIRE(s1_counter == num_tasks);
@@ -223,7 +257,11 @@ TEST_CASE("strand: exception handling", "[strand][exceptions]") {
     s.post([&] { counter++; });
     s.post([&] { counter++; });
 
-    std::this_thread::sleep_for(50ms);
+    // Wait for all tasks to complete
+    while (counter.load() < 3) {
+        std::this_thread::sleep_for(1ms);
+    }
+
     pool.stop();
 
     // All tasks should have executed (exceptions are caught)
@@ -241,12 +279,12 @@ TEST_CASE("strand: recursion depth limit", "[strand][recursion]") {
     // We'll post a task that dispatches itself recursively
     auto recursive_task = std::make_shared<std::function<void(int)>>();
     std::weak_ptr<std::function<void(int)>> weak_task = recursive_task;
-    *recursive_task = [&, weak_task](int depth) {
+    *recursive_task = [&, weak_task](int t_depth) {
         call_count++;
 
-        if (depth < 150) {  // Try to recurse deeply
+        if (t_depth < 150) {  // Try to recurse deeply
             if (auto task = weak_task.lock()) {
-                s.dispatch([task, depth] { (*task)(depth + 1); });
+                s.dispatch([task, t_depth] { (*task)(t_depth + 1); });
             }
         } else {
             exceeded_limit = true;
@@ -255,7 +293,11 @@ TEST_CASE("strand: recursion depth limit", "[strand][recursion]") {
 
     s.post([recursive_task] { (*recursive_task)(0); });
 
-    std::this_thread::sleep_for(200ms);
+    // Wait for exceeded_limit to be set
+    while (!exceeded_limit.load()) {
+        std::this_thread::sleep_for(1ms);
+    }
+
     pool.stop();
 
     // Should have completed all 150 calls
@@ -270,6 +312,7 @@ TEST_CASE("strand: running_in_this_thread()", "[strand][thread-detection]") {
 
     std::atomic<bool> inside_check{false};
     std::atomic<bool> outside_check{false};
+    std::atomic<bool> done{false};
 
     // From main thread - not on strand
     outside_check = s.running_in_this_thread();
@@ -277,9 +320,14 @@ TEST_CASE("strand: running_in_this_thread()", "[strand][thread-detection]") {
     s.post([&] {
         // From strand thread - should return true
         inside_check = s.running_in_this_thread();
+        done = true;
     });
 
-    std::this_thread::sleep_for(50ms);
+    // Wait for task to complete
+    while (!done.load()) {
+        std::this_thread::sleep_for(1ms);
+    }
+
     pool.stop();
 
     REQUIRE(outside_check == false);

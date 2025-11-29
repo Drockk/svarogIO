@@ -17,7 +17,7 @@ public:
     class executor_type {
     public:
         void execute(std::move_only_function<void()> t_f) const;
-        io_context& context() const noexcept;
+        [[nodiscard]] io_context& context() const noexcept;
 
         bool operator==(const executor_type& t_other) const noexcept {
             return m_context == t_other.m_context;

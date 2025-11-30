@@ -7,6 +7,7 @@
 #include "svarog/core/contracts.hpp"
 #include "svarog/execution/work_queue.hpp"
 #include "svarog/io/detail/platform_config.hpp"
+#include "svarog/io/detail/timer_queue.hpp"
 
 #if defined(SVAROG_PLATFORM_LINUX)
     #include "svarog/io/detail/epoll_reactor.hpp"
@@ -97,9 +98,8 @@ private:
 
     [[nodiscard]] bool has_pending_work() const noexcept;
 
-    // TODO: Implement when timer_queue is ready
-    // void process_timers();
-    // [[nodiscard]] std::chrono::milliseconds get_next_timer_timeout() const;
+    void process_timers();
+    [[nodiscard]] std::chrono::milliseconds get_next_timer_timeout() const;
 
     std::atomic<bool> m_stopped{false};
     execution::work_queue<> m_handlers;
@@ -108,8 +108,7 @@ private:
 
     detail::platform_reactor m_reactor;
 
-    // TODO: Add when timer_queue is implemented
-    // detail::timer_queue m_timer_queue;
+    detail::timer_queue m_timer_queue;
 
     friend class execution::executor_work_guard;
 };

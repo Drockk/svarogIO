@@ -16,27 +16,29 @@ io_context::io_context([[maybe_unused]] size_t t_concurrency_hint) {
     // e.g., pre-allocating internal structures
 }
 
-// TODO: Implement when timer_queue is ready
-// void io_context::process_timers() {
-//     auto now = std::chrono::steady_clock::now();
-//     while (m_timer_queue.has_expired(now)) {
-//         auto handler = m_timer_queue.pop_expired();
-//         m_handlers.push(std::move(handler));
-//     }
-// }
+void io_context::process_timers() {
+    auto now = std::chrono::steady_clock::now();
+    while (m_timer_queue.has_expired(now)) {
+        auto handler = m_timer_queue.pop_expired();
+        if (handler) {
+            // Wrap timer_handler (void(error_code)) into work_item (void())
+            [[maybe_unused]] bool pushed =
+                m_handlers.push([h = std::move(*handler)]() mutable { h(std::error_code{}); });
+        }
+    }
+}
 
-// TODO: Implement when timer_queue is ready
-// std::chrono::milliseconds io_context::get_next_timer_timeout() const {
-//     if (m_timer_queue.empty()) {
-//         return std::chrono::milliseconds::max();
-//     }
-//     auto now = std::chrono::steady_clock::now();
-//     auto next_expiry = m_timer_queue.get_next_expiry();
-//     if (next_expiry <= now) {
-//         return std::chrono::milliseconds::zero();
-//     }
-//     return std::chrono::duration_cast<std::chrono::milliseconds>(next_expiry - now);
-// }
+std::chrono::milliseconds io_context::get_next_timer_timeout() const {
+    auto next_expiry = m_timer_queue.get_next_expiry();
+    if (!next_expiry) {
+        return std::chrono::milliseconds::max();
+    }
+    auto now = std::chrono::steady_clock::now();
+    if (*next_expiry <= now) {
+        return std::chrono::milliseconds::zero();
+    }
+    return std::chrono::duration_cast<std::chrono::milliseconds>(*next_expiry - now);
+}
 
 std::chrono::milliseconds io_context::calculate_timeout() const {
     // If work_queue has pending handlers, don't wait
@@ -44,13 +46,16 @@ std::chrono::milliseconds io_context::calculate_timeout() const {
         return std::chrono::milliseconds::zero();
     }
 
-    // TODO: When timer_queue is implemented, use:
-    // auto timer_timeout = get_next_timer_timeout();
+    // When timer_queue is implemented, use:
+    auto timer_timeout = get_next_timer_timeout();
 
-    // If we have work_guard, we can wait indefinitely (or until timer)
+    // If we have work_guard, we can wait but with bounded timeout
+    // This allows periodic checks for stop condition and work_guard release
+    // TODO: Implement proper wake_up() mechanism using eventfd/pipe
+    constexpr auto max_wait = std::chrono::milliseconds(100);
+
     if (m_work_count.load(std::memory_order_acquire) > 0) {
-        // TODO: return std::min(timer_timeout, std::chrono::milliseconds::max());
-        return std::chrono::milliseconds{100};  // Poll every 100ms for now
+        return std::min(timer_timeout, max_wait);
     }
 
     // No work_guard and no handlers - don't wait
@@ -62,7 +67,7 @@ bool io_context::has_pending_work() const noexcept {
     // 1. work_queue is not empty, OR
     // 2. work_guard is active (m_work_count > 0), OR
     // 3. reactor has registered descriptors
-    // TODO: 4. timer_queue has pending timers
+    // 4. timer_queue has pending timers
 
     if (!m_handlers.empty()) {
         return true;
@@ -77,12 +82,7 @@ bool io_context::has_pending_work() const noexcept {
     //     return true;
     // }
 
-    // TODO: Check timer_queue when implemented
-    // if (!m_timer_queue.empty()) {
-    //     return true;
-    // }
-
-    return false;
+    return !m_timer_queue.empty();
 }
 
 void io_context::run() {
@@ -94,8 +94,7 @@ void io_context::run() {
             break;
         }
 
-        // TODO: Process expired timers when timer_queue is implemented
-        // process_timers();
+        process_timers();
 
         // Calculate how long reactor should wait
         auto timeout = calculate_timeout();
@@ -120,8 +119,7 @@ void io_context::run() {
 size_t io_context::run_one() {
     s_current_context = this;
 
-    // TODO: Process expired timers when timer_queue is implemented
-    // process_timers();
+    process_timers();
 
     // Try to execute a handler from work_queue first
     auto handler_result = m_handlers.try_pop();
@@ -151,8 +149,7 @@ size_t io_context::poll() {
     s_current_context = this;
     size_t count = 0;
 
-    // TODO: Process expired timers when timer_queue is implemented
-    // process_timers();
+    process_timers();
 
     // Poll reactor without blocking
     m_reactor.poll_one();
@@ -174,8 +171,7 @@ size_t io_context::poll() {
 size_t io_context::poll_one() {
     s_current_context = this;
 
-    // TODO: Process expired timers when timer_queue is implemented
-    // process_timers();
+    process_timers();
 
     // Poll reactor without blocking
     m_reactor.poll_one();

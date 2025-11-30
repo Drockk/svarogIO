@@ -1,8 +1,6 @@
 
 #include "svarog/io/detail/kqueue_reactor.hpp"
 
-#ifdef SVAROG_PLATFORM_MACOS
-
 namespace svarog::io::detail {
 kqueue_reactor::kqueue_reactor() : m_kqueue_fd(kqueue()) {
     if (m_kqueue_fd == -1) {
@@ -76,5 +74,3 @@ std::size_t kqueue_reactor::do_run_one(std::chrono::milliseconds t_timeout) {
     return processed;
 }
 }  // namespace svarog::io::detail
-
-#endif  // SVAROG_PLATFORM_MACOS

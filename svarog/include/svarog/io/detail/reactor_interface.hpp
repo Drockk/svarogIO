@@ -40,6 +40,7 @@ using completion_handler = std::move_only_function<void(std::error_code, std::si
 
 template <typename Derived>
 class reactor_base {
+public:
     void register_descriptor(native_handle_type t_fd, io_operation t_ops, completion_handler t_handler) {
         static_cast<Derived*>(this)->do_register(t_fd, t_ops, std::move(t_handler));
     }

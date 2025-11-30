@@ -1,4 +1,9 @@
+#pragma once
+
+#include <array>
 #include <atomic>
+#include <mutex>
+#include <unordered_map>
 
 #include "svarog/io/detail/platform_config.hpp"
 #include "svarog/io/detail/reactor_interface.hpp"
@@ -6,6 +11,7 @@
 #ifdef SVAROG_PLATFORM_LINUX
 
     #include <sys/epoll.h>
+    #include <sys/socket.h>
 
 namespace svarog::io::detail {
 constexpr std::uint32_t to_epoll_events(io_operation t_ops) noexcept {

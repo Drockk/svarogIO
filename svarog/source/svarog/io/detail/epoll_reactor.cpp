@@ -1,11 +1,21 @@
-#include "svarog/io/detail//epoll_reactor.hpp"
+#include "svarog/io/detail/epoll_reactor.hpp"
 
 #ifdef SVAROG_PLATFORM_LINUX
 
+    #include <unistd.h>
+
 namespace svarog::io::detail {
+
 epoll_reactor::epoll_reactor(trigger_mode t_mode) : m_epoll_fd(epoll_create1(EPOLL_CLOEXEC)), m_mode(t_mode) {
     if (m_epoll_fd == -1) {
         throw std::system_error(errno, std::system_category(), "epoll_create1 failed");
+    }
+}
+
+epoll_reactor::~epoll_reactor() {
+    if (m_epoll_fd != -1) {
+        ::close(m_epoll_fd);
+        m_epoll_fd = -1;
     }
 }
 
@@ -29,7 +39,41 @@ void epoll_reactor::do_register(native_handle_type t_fd, io_operation t_ops, com
     }
 }
 
+void epoll_reactor::do_unregister(native_handle_type t_fd) {
+    if (epoll_ctl(m_epoll_fd, EPOLL_CTL_DEL, t_fd, nullptr) == -1) {
+        // Ignore ENOENT - fd may have been closed already
+        if (errno != ENOENT) {
+            throw std::system_error(errno, std::system_category(), "epoll_ctl DEL failed");
+        }
+    }
+
+    std::lock_guard lock(m_mutex);
+    m_handlers.erase(t_fd);
+}
+
+void epoll_reactor::do_modify(native_handle_type t_fd, io_operation t_ops) {
+    epoll_event ev{};
+    ev.events = to_epoll_events(t_ops);
+    if (m_mode == trigger_mode::edge_triggered) {
+        ev.events |= EPOLLET;
+    }
+    ev.data.fd = t_fd;
+
+    if (epoll_ctl(m_epoll_fd, EPOLL_CTL_MOD, t_fd, &ev) == -1) {
+        throw std::system_error(errno, std::system_category(), "epoll_ctl MOD failed");
+    }
+
+    std::lock_guard lock(m_mutex);
+    if (auto it = m_handlers.find(t_fd); it != m_handlers.end()) {
+        it->second.operations = t_ops;
+    }
+}
+
 std::size_t epoll_reactor::do_run_one(std::chrono::milliseconds t_timeout) {
+    if (m_stopped.load(std::memory_order_acquire)) {
+        return 0;
+    }
+
     auto timeout_ms = static_cast<int>(t_timeout.count());
     auto n = epoll_wait(m_epoll_fd, m_events.data(), max_events, timeout_ms);
 
@@ -40,7 +84,7 @@ std::size_t epoll_reactor::do_run_one(std::chrono::milliseconds t_timeout) {
     }
 
     std::size_t processed = 0;
-    for (size_t i = 0; i < static_cast<size_t>(n); ++i) {
+    for (std::size_t i = 0; i < static_cast<std::size_t>(n); ++i) {
         auto fd = m_events.at(i).data.fd;
         auto events = from_epoll_events(m_events.at(i).events);
 
@@ -67,6 +111,19 @@ std::size_t epoll_reactor::do_run_one(std::chrono::milliseconds t_timeout) {
     }
     return processed;
 }
+
+std::size_t epoll_reactor::do_poll_one() {
+    return do_run_one(std::chrono::milliseconds::zero());
+}
+
+void epoll_reactor::do_stop() {
+    m_stopped.store(true, std::memory_order_release);
+}
+
+bool epoll_reactor::is_stopped() const noexcept {
+    return m_stopped.load(std::memory_order_acquire);
+}
+
 }  // namespace svarog::io::detail
 
-#endif
+#endif  // SVAROG_PLATFORM_LINUX

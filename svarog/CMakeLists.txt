@@ -29,6 +29,8 @@ target_sources(
       "include/svarog/io/detail/platform_config.hpp"
       "include/svarog/io/detail/reactor_interface.hpp"
       "include/svarog/io/io_context.hpp"
+      "include/svarog/io/steady_timer.hpp"
+      "include/svarog/io/system_timer.hpp"
       "include/svarog/ip/ip_address.hpp"
       "include/svarog/ip/ip_address_v4.hpp"
       "include/svarog/network/socket.hpp"

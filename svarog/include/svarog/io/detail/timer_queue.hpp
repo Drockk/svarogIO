@@ -11,9 +11,12 @@
 
 namespace svarog::io::detail {
 using timer_id = std::uint64_t;
+inline constexpr timer_id invalid_timer_id = 0;
+
 using clock_type = std::chrono::steady_clock;
 using time_point = clock_type::time_point;
 using duration = clock_type::duration;
+
 using timer_handler = std::move_only_function<void(std::error_code)>;
 
 struct timer_entry {

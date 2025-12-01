@@ -64,6 +64,13 @@ public:
         return m_reactor;
     }
 
+    detail::timer_queue& get_timer_queue() noexcept {
+        return m_timer_queue;
+    }
+    const detail::timer_queue& get_timer_queue() const noexcept {
+        return m_timer_queue;
+    }
+
     void run();
     size_t run_one();
 

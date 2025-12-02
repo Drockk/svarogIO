@@ -4,19 +4,19 @@
 // #include <netinet/in.h>
 // #include <sys/socket.h>
 // #include <unistd.h>
-#include <iostream>
+// #include <iostream>
 
-#include <svarog/ip/ip_address.hpp>
-#include <svarog/ip/ip_address_v4.hpp>
+// #include <svarog/ip/ip_address.hpp>
+// #include <svarog/ip/ip_address_v4.hpp>
 
 int main() {
-    const auto ip_address = svarog::ip::make_ip_address_v4("127.0.0.1");
-    const auto ip_address1 = svarog::ip::make_ip_address_v4(std::string("127.0.5.1"));
-    const auto ip_address2 = svarog::ip::make_ip_address_v4(std::string_view("127.0.0.1"));
+    // const auto ip_address = svarog::ip::make_ip_address_v4("127.0.0.1");
+    // const auto ip_address1 = svarog::ip::make_ip_address_v4(std::string("127.0.5.1"));
+    // const auto ip_address2 = svarog::ip::make_ip_address_v4(std::string_view("127.0.0.1"));
 
-    std::cout << "IP Address: " << ip_address << std::endl;
-    std::cout << "IP Address: " << ip_address1.to_string() << std::endl;
-    std::cout << std::format("IP Address: {}\n", ip_address2);
+    // std::cout << "IP Address: " << ip_address << std::endl;
+    // std::cout << "IP Address: " << ip_address1.to_string() << std::endl;
+    // std::cout << std::format("IP Address: {}\n", ip_address2);
     // const auto serverSocket = socket(AF_INET, SOCK_STREAM, 0);
 
     // sockaddr_in serverAddress{};

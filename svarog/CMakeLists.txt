@@ -8,8 +8,9 @@ target_sources(
     "source/svarog/execution/work_guard.cpp"
     "source/svarog/io/detail/timer_queue.cpp"
     "source/svarog/io/io_context.cpp"
-    "source/svarog/ip/ip_address.cpp"
-    "source/svarog/ip/ip_address_v4.cpp"
+    "source/svarog/network/ip/address_v4.cpp"
+    "source/svarog/network/ip/address_v6.cpp"
+    "source/svarog/network/ip/address.cpp"
     "source/svarog/network/socket.cpp"
   PUBLIC
     FILE_SET svarog_headers
@@ -31,8 +32,10 @@ target_sources(
       "include/svarog/io/io_context.hpp"
       "include/svarog/io/steady_timer.hpp"
       "include/svarog/io/system_timer.hpp"
-      "include/svarog/ip/ip_address.hpp"
-      "include/svarog/ip/ip_address_v4.hpp"
+      "include/svarog/network/detail/socket_types.hpp"
+      "include/svarog/network/ip/address_v4.hpp"
+      "include/svarog/network/ip/address_v6.hpp"
+      "include/svarog/network/ip/address.hpp"
       "include/svarog/network/socket.hpp"
 )
 

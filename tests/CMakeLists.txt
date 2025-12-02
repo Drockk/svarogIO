@@ -19,6 +19,7 @@ add_svarog_test(execution/work_queue_basic_tests.cpp)
 add_svarog_test(execution/thread_pool_tests.cpp)
 add_svarog_test(execution/strand_tests.cpp)
 add_svarog_test(io/io_context_tests.cpp)
+add_svarog_test(network/ip/address_tests.cpp)
 
 # ============================================================================
 # Integration Tests

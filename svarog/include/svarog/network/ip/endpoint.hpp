@@ -117,6 +117,7 @@ public:
         }
         if (m_data.m_v4.sin_family == AF_INET6) {
             return m_data.m_v6.sin6_port == t_other.m_data.m_v6.sin6_port &&
+                   m_data.m_v6.sin6_flowinfo == t_other.m_data.m_v6.sin6_flowinfo &&
                    std::memcmp(&m_data.m_v6.sin6_addr, &t_other.m_data.m_v6.sin6_addr, sizeof(in6_addr)) == 0 &&
                    m_data.m_v6.sin6_scope_id == t_other.m_data.m_v6.sin6_scope_id;
         }

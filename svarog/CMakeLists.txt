@@ -36,6 +36,9 @@ target_sources(
       "include/svarog/network/ip/address_v4.hpp"
       "include/svarog/network/ip/address_v6.hpp"
       "include/svarog/network/ip/address.hpp"
+      "include/svarog/network/ip/endpoint.hpp"
+      "include/svarog/network/ip/tcp.hpp"
+      "include/svarog/network/ip/udp.hpp"
       "include/svarog/network/socket.hpp"
 )
 

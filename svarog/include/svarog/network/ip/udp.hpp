@@ -9,6 +9,8 @@ public:
     using endpoint = basic_endpoint<udp>;
     // using socket = basic_datagram_socket<udp>;
 
+    constexpr udp() noexcept = default;
+
     static constexpr udp v4() noexcept {
         return udp{AF_INET};
     }

@@ -10,6 +10,8 @@ public:
     // using socket = basic_stream_socket<tcp>;
     // using acceptor = basic_acceptor<tcp>;
 
+    constexpr tcp() noexcept = default;
+
     static constexpr tcp v4() noexcept {
         return tcp{AF_INET};
     }

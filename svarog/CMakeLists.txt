@@ -11,7 +11,6 @@ target_sources(
     "source/svarog/network/ip/address_v4.cpp"
     "source/svarog/network/ip/address_v6.cpp"
     "source/svarog/network/ip/address.cpp"
-    "source/svarog/network/socket.cpp"
   PUBLIC
     FILE_SET svarog_headers
     TYPE HEADERS
@@ -39,7 +38,8 @@ target_sources(
       "include/svarog/network/ip/endpoint.hpp"
       "include/svarog/network/ip/tcp.hpp"
       "include/svarog/network/ip/udp.hpp"
-      "include/svarog/network/socket.hpp"
+      "include/svarog/network/basic_socket.hpp"
+      "include/svarog/network/socket_base.hpp"
 )
 
 target_link_libraries("svarog"
